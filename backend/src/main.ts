@@ -1,0 +1,55 @@
+import cookie from '@fastify/cookie';
+import cors from '@fastify/cors';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
+
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ logger: true }),
+  );
+  const configService = app.get(ConfigService);
+  const appOrigin = configService.get<string>('app.origin', 'http://localhost:3000');
+
+  await app.register(cors, {
+    origin: appOrigin,
+    credentials: true,
+  });
+  await app.register(cookie, {
+    secret: configService.get<string>('auth.refreshSecret'),
+  });
+
+  app.setGlobalPrefix('api/v1');
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('FitNova AI API')
+    .setDescription('AI-powered fitness SaaS backend APIs for auth, users, coaching, and plan generation.')
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, swaggerDocument, {
+    useGlobalPrefix: true,
+    customSiteTitle: 'FitNova AI API Docs',
+  });
+
+  const port = configService.get<number>('app.port', 4000);
+  await app.listen({ port, host: '0.0.0.0' });
+}
+
+bootstrap();
