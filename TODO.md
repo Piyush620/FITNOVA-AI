@@ -8,47 +8,53 @@
 - [x] Users module
 - [x] Workouts module
 - [x] Diet module
+- [x] Progress module
 - [x] Swagger docs
 - [x] GitHub repo setup
 - [x] Gemini AI provider integrated and tested
+- [x] AI interaction history persistence
+- [x] Adaptive AI endpoint
+- [x] Real dashboard aggregation from backend data
+- [x] Stripe + PostgreSQL + Redis scaffolding/config setup
 - [ ] Frontend web app
 - [ ] Mobile app
-- [ ] Billing/subscriptions
+- [ ] Live billing integration
 
 ## Next Decision
 
 Choose one of these next:
 
-- [ ] Build `progress` module
 - [ ] Start `frontend` web app
-- [ ] Store AI-generated plans into MongoDB
-- [ ] Add `Stripe + PostgreSQL`
-- [ ] Add `Redis + BullMQ` real job processing
+- [ ] Store AI-generated workout and diet plans directly into collections
+- [ ] Turn Stripe/PostgreSQL scaffolding into live billing
+- [ ] Turn Redis/BullMQ scaffolding into live workers
 
 ## Recommended Next Order
 
 ### 1. Backend Core
 
-- [ ] Build `progress` module
-- [ ] Connect dashboard summary to real workout/diet/progress data
-- [ ] Add pagination and better response shaping
-- [ ] Add better error handling and logging polish
+- [x] Connect dashboard summary to real workout/diet/progress data
+- [x] Add pagination and better response shaping
+- [x] Add better error handling and logging polish
 
 ### 2. AI Layer
 
 - [x] Decide AI strategy
 - [x] Use `Gemini` for development
+- [x] Store AI-generated interaction history in MongoDB
+- [x] Add adaptive weekly recommendations
 - [ ] Add fallback provider strategy if needed later
-- [ ] Store generated workout/diet plans in MongoDB
-- [ ] Add adaptive weekly recommendations
+- [ ] Store generated workout/diet plans directly into workout and diet collections
 
 ### 3. Payments
 
-- [ ] Add PostgreSQL setup
-- [ ] Create subscription tables
-- [ ] Add Stripe checkout flow
-- [ ] Add Stripe webhook handling
+- [x] Add PostgreSQL setup scaffolding
+- [x] Create subscription tables
+- [x] Add Stripe checkout flow scaffolding
+- [x] Add Stripe webhook handling scaffolding
 - [ ] Add premium feature gating
+- [ ] Connect real Stripe SDK checkout session creation
+- [ ] Persist subscriptions into PostgreSQL
 
 ### 4. Frontend
 
@@ -82,11 +88,61 @@ Choose one of these next:
 
 ## Immediate Candidate Tasks
 
-- [ ] Connect dashboard to real workout/diet/progress data
 - [ ] Store AI-generated plans into workouts/diet collections
+- [ ] Test the latest AI save endpoints in Swagger
+- [ ] Test subscriptions scaffold routes in Swagger
+- [ ] Start `frontend` app scaffold
 - [ ] README update with full API route list
 - [ ] Postman collection or exported Swagger workflow
 - [ ] Seed/demo data generator
+
+## Backend Completion Checklist
+
+Use this section as the final definition of "backend fully complete".
+
+### Live Billing
+
+- [ ] Integrate real Stripe SDK checkout session creation
+- [ ] Verify Stripe webhook signatures with `STRIPE_WEBHOOK_SECRET`
+- [ ] Handle subscription lifecycle events
+
+### PostgreSQL Persistence
+
+- [ ] Connect live PostgreSQL persistence using `POSTGRES_URL`
+- [ ] Save Stripe customer records
+- [ ] Save subscription records
+- [ ] Update subscription status from webhook events
+
+### Redis / BullMQ
+
+- [ ] Add real BullMQ workers
+- [ ] Process queued AI/background jobs
+- [ ] Add retry handling and job failure logging
+
+### AI Persistence
+
+- [ ] Save structured AI workout plans directly into workout collections
+- [ ] Save structured AI diet plans directly into diet collections
+- [ ] Improve structured JSON parsing and validation safeguards
+
+### Testing
+
+- [ ] Add module-level tests
+- [ ] Add integration tests
+- [ ] Add end-to-end flow tests
+
+### Production Hardening
+
+- [ ] Add rate limiting
+- [ ] Improve logging and monitoring hooks
+- [ ] Finalize production secret handling
+- [ ] Review CORS and deployment-safe config
+
+### DevOps
+
+- [ ] Add backend Dockerfile
+- [ ] Add docker-compose setup
+- [ ] Add deployment-ready environment documentation
 
 ## Notes
 
