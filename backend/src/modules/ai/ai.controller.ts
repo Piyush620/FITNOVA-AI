@@ -6,6 +6,7 @@ import { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 
 import { AiService } from './ai.service';
 import { CoachChatDto } from './dto/coach-chat.dto';
+import { AdaptivePlanDto } from './dto/adaptive-plan.dto';
 import { GenerateDietPlanDto } from './dto/generate-diet-plan.dto';
 import { GenerateWorkoutPlanDto } from './dto/generate-workout-plan.dto';
 import { QueuePlanJobDto } from './dto/queue-plan-job.dto';
@@ -20,6 +21,12 @@ export class AiController {
   @ApiOperation({ summary: 'Get AI service configuration status' })
   getStatus() {
     return this.aiService.getStatus();
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get AI interaction history for the current user' })
+  async getHistory(@CurrentUser() user: JwtPayload) {
+    return this.aiService.getHistory(user.sub);
   }
 
   @Post('workout-plan')
@@ -40,6 +47,24 @@ export class AiController {
     return this.aiService.generateDietPlan(user.sub, payload);
   }
 
+  @Post('workout-plan/save')
+  @ApiOperation({ summary: 'Generate a structured AI workout plan and save it into workout plans' })
+  async generateAndSaveWorkoutPlan(
+    @CurrentUser() user: JwtPayload,
+    @Body() payload: GenerateWorkoutPlanDto,
+  ) {
+    return this.aiService.generateAndSaveWorkoutPlan(user.sub, payload);
+  }
+
+  @Post('diet-plan/save')
+  @ApiOperation({ summary: 'Generate a structured AI diet plan and save it into diet plans' })
+  async generateAndSaveDietPlan(
+    @CurrentUser() user: JwtPayload,
+    @Body() payload: GenerateDietPlanDto,
+  ) {
+    return this.aiService.generateAndSaveDietPlan(user.sub, payload);
+  }
+
   @Post('coach-chat')
   @ApiOperation({ summary: 'Chat with the AI fitness coach' })
   async coachChat(
@@ -47,6 +72,15 @@ export class AiController {
     @Body() payload: CoachChatDto,
   ) {
     return this.aiService.coachChat(user.sub, payload);
+  }
+
+  @Post('adaptive-plan')
+  @ApiOperation({ summary: 'Generate adaptive weekly guidance based on workouts, diet, and progress history' })
+  async adaptivePlan(
+    @CurrentUser() user: JwtPayload,
+    @Body() payload: AdaptivePlanDto,
+  ) {
+    return this.aiService.generateAdaptivePlan(user.sub, payload);
   }
 
   @Post('queue')

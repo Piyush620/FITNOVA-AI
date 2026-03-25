@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 
 import { CreateDietPlanDto } from './dto/create-diet-plan.dto';
@@ -24,8 +25,11 @@ export class DietController {
 
   @Get('plans')
   @ApiOperation({ summary: 'List all diet plans for the current user' })
-  async listPlans(@CurrentUser() user: JwtPayload) {
-    return this.dietService.listPlans(user.sub);
+  async listPlans(
+    @CurrentUser() user: JwtPayload,
+    @Query() pagination: PaginationQueryDto,
+  ) {
+    return this.dietService.listPlans(user.sub, pagination);
   }
 
   @Get('plans/active')

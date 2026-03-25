@@ -14,6 +14,7 @@
     "test:cov": "jest --coverage"
   },
   "dependencies": {
+    "@google/genai": "^1.15.0",
     "@fastify/cookie": "^10.0.1",
     "@fastify/cors": "^10.0.1",
     "@fastify/swagger": "^9.5.1",

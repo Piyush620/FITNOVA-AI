@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+
 import { CreateDietPlanDto } from './dto/create-diet-plan.dto';
 import { DietPlan, DietPlanDocument, DietPlanStatus } from './schemas/diet-plan.schema';
 
@@ -44,13 +46,31 @@ export class DietService {
     return this.serializePlan(plan);
   }
 
-  async listPlans(userId: string) {
-    const plans = await this.dietPlanModel
-      .find({ userId: new Types.ObjectId(userId) })
-      .sort({ updatedAt: -1 })
-      .lean();
+  async listPlans(userId: string, pagination: PaginationQueryDto) {
+    const page = pagination.page ?? 1;
+    const limit = pagination.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const filter = { userId: new Types.ObjectId(userId) };
 
-    return plans.map((plan) => this.serializeLeanPlan(plan));
+    const [plans, total] = await Promise.all([
+      this.dietPlanModel
+        .find(filter)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.dietPlanModel.countDocuments(filter),
+    ]);
+
+    return {
+      items: plans.map((plan) => this.serializeLeanPlan(plan)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 
   async getActivePlan(userId: string) {

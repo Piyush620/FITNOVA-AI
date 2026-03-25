@@ -10,6 +10,7 @@ import {
 } from '@nestjs/platform-fastify';
 
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -35,6 +36,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('FitNova AI API')

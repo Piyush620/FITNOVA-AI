@@ -14,9 +14,16 @@ export default () => ({
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '30d',
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 12),
   },
+  ai: {
+    provider: process.env.AI_PROVIDER ?? 'gemini',
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
-    model: process.env.OPENAI_MODEL ?? 'gpt-5',
+    model: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',
   },
   redis: {
     enabled: process.env.REDIS_ENABLED === 'true',
@@ -25,5 +32,14 @@ export default () => ({
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD,
     db: Number(process.env.REDIS_DB ?? 0),
+  },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    priceMonthly: process.env.STRIPE_PRICE_MONTHLY,
+    priceYearly: process.env.STRIPE_PRICE_YEARLY,
+  },
+  postgres: {
+    url: process.env.POSTGRES_URL,
   },
 });

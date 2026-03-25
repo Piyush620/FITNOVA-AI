@@ -5,6 +5,8 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+
 import {
   WorkoutPlan,
   WorkoutPlanDocument,
@@ -48,13 +50,31 @@ export class WorkoutsService {
     return this.serializePlan(plan);
   }
 
-  async listPlans(userId: string) {
-    const plans = await this.workoutPlanModel
-      .find({ userId: new Types.ObjectId(userId) })
-      .sort({ updatedAt: -1 })
-      .lean();
+  async listPlans(userId: string, pagination: PaginationQueryDto) {
+    const page = pagination.page ?? 1;
+    const limit = pagination.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const filter = { userId: new Types.ObjectId(userId) };
 
-    return plans.map((plan) => this.serializeLeanPlan(plan));
+    const [plans, total] = await Promise.all([
+      this.workoutPlanModel
+        .find(filter)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.workoutPlanModel.countDocuments(filter),
+    ]);
+
+    return {
+      items: plans.map((plan) => this.serializeLeanPlan(plan)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   }
 
   async getActivePlan(userId: string) {
