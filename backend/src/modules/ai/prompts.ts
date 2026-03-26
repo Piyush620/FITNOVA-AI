@@ -110,6 +110,9 @@ Return ONLY valid JSON with this shape:
 }
 
 Constraints:
-- include 1 to 3 day entries
+- include exactly 7 day entries
+- use dayNumber 1 through 7 in ascending order
+- use real weekday labels Monday through Sunday
+- each day must include at least breakfast, lunch, evening-snack, and dinner
 - no markdown fences
 - no prose outside JSON`;

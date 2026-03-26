@@ -200,7 +200,7 @@ export class AiService {
       'You are FitNova AI, an expert Indian nutrition coach that returns strict JSON.',
       structuredDietPrompt(payload),
     );
-    const parsedPlan = this.parseJsonResponse(output) as CreateDietPlanDto;
+    const parsedPlan = this.normalizeDietPlan(this.parseJsonResponse(output) as CreateDietPlanDto);
     const savedPlan = await this.dietService.createPlan(userId, parsedPlan);
 
     await this.persistInteraction(
@@ -350,6 +350,31 @@ export class AiService {
         'AI provider returned a response that could not be parsed into structured JSON.',
       );
     }
+  }
+
+  private normalizeDietPlan(plan: CreateDietPlanDto) {
+    const weekdayLabels = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const sourceDays = Array.isArray(plan.days) ? plan.days.filter((day) => day && Array.isArray(day.meals) && day.meals.length > 0) : [];
+
+    if (sourceDays.length === 0) {
+      throw new InternalServerErrorException('AI provider returned a diet plan without any usable day entries.');
+    }
+
+    const normalizedDays = weekdayLabels.map((label, index) => {
+      const template = sourceDays[index] ?? sourceDays[index % sourceDays.length];
+
+      return {
+        ...template,
+        dayNumber: index + 1,
+        dayLabel: label,
+        meals: template.meals.map((meal) => ({ ...meal })),
+      };
+    });
+
+    return {
+      ...plan,
+      days: normalizedDays,
+    };
   }
 
   private async generateWithGemini(instructions: string, input: string) {

@@ -2,7 +2,7 @@ export default () => ({
   app: {
     name: process.env.APP_NAME ?? 'FitNova AI',
     port: Number(process.env.PORT ?? 4000),
-    origin: process.env.APP_ORIGIN ?? 'http://localhost:3000',
+    origin: process.env.APP_ORIGIN ?? 'http://localhost:3000,http://localhost:5173',
   },
   database: {
     mongodbUri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/fitnova-ai',

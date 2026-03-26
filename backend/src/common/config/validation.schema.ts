@@ -3,7 +3,7 @@ import * as Joi from 'joi';
 export const validationSchema = Joi.object({
   PORT: Joi.number().default(4000),
   APP_NAME: Joi.string().default('FitNova AI'),
-  APP_ORIGIN: Joi.string().uri().default('http://localhost:3000'),
+  APP_ORIGIN: Joi.string().default('http://localhost:3000,http://localhost:5173'),
   MONGODB_URI: Joi.string().required(),
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_ACCESS_TTL: Joi.string().required(),

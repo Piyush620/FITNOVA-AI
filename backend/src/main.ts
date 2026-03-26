@@ -18,10 +18,24 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true }),
   );
   const configService = app.get(ConfigService);
-  const appOrigin = configService.get<string>('app.origin', 'http://localhost:3000');
+  const configuredOrigins = configService.get<string>(
+    'app.origin',
+    'http://localhost:3000,http://localhost:5173',
+  );
+  const allowedOrigins = configuredOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   await app.register(cors, {
-    origin: appOrigin,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
+    },
     credentials: true,
   });
   await app.register(cookie, {
