@@ -1,5 +1,6 @@
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -37,6 +38,16 @@ async function bootstrap() {
       callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
     },
     credentials: true,
+  });
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+      },
+    },
   });
   await app.register(cookie, {
     secret: configService.get<string>('auth.refreshSecret'),

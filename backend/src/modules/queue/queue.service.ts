@@ -45,6 +45,38 @@ export class QueueService implements OnModuleDestroy {
     });
   }
 
+  async getQueueStats() {
+    if (!this.planGenerationQueue) {
+      return {
+        enabled: false,
+        message: 'Queue system not enabled',
+      };
+    }
+
+    try {
+      const counts = await this.planGenerationQueue.getJobCounts(
+        'active',
+        'completed',
+        'delayed',
+        'failed',
+        'paused',
+        'prioritized',
+        'waiting',
+        'waiting-children',
+      );
+      return {
+        enabled: true,
+        planGeneration: counts,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        enabled: false,
+        error: error instanceof Error ? error.message : 'Failed to get queue stats',
+      };
+    }
+  }
+
   async onModuleDestroy() {
     if (this.planGenerationQueue) {
       await this.planGenerationQueue.close();

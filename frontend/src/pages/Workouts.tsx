@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Pagination } from '../components/Common';
+import { Card, Button, Input, Pagination, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
+import { toastSuccess, toastError } from '../utils/toast';
 import type { GenerateWorkoutPlanPayload, WorkoutDay, WorkoutPlan } from '../types';
 
 type ApiErrorResponse = {
@@ -146,11 +147,14 @@ export const WorkoutsPage: React.FC = () => {
       setSelectedPlanId(nextActivePlan.id);
       navigate(`/workouts/${nextActivePlan.id}`);
       await loadPlans();
+      toastSuccess('Workout plan activated! 💪');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : undefined;
-      setError(message || 'Failed to activate workout plan.');
+      const errorMsg = message || 'Failed to activate workout plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -173,11 +177,14 @@ export const WorkoutsPage: React.FC = () => {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
       }
       await loadPlans();
+      toastSuccess('Workout completed! Great job! 🎉');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : undefined;
-      setError(message || 'Failed to mark workout day as complete.');
+      const errorMsg = message || 'Failed to mark workout day as complete.';
+      setError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -186,6 +193,7 @@ export const WorkoutsPage: React.FC = () => {
   const handleGeneratePlan = async () => {
     if (!generatorState.weight || !generatorState.goal || !generatorState.experience || !generatorState.equipment) {
       setGeneratorError('Fill in weight, goal, experience, and equipment before generating a plan.');
+      toastError('Please fill in all required fields');
       return;
     }
 
@@ -210,13 +218,16 @@ export const WorkoutsPage: React.FC = () => {
       setSelectedPlanId(generatedPlan.id);
       navigate(`/workouts/${generatedPlan.id}`);
       await loadPlans(false, 1);
+      toastSuccess('AI workout plan generated and saved! 🤖💪');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : error instanceof Error
           ? error.message
           : undefined;
-      setGeneratorError(message || 'Failed to generate and save workout plan.');
+      const errorMsg = message || 'Failed to generate and save workout plan.';
+      setGeneratorError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -338,19 +349,17 @@ export const WorkoutsPage: React.FC = () => {
                 value={generatorState.goal}
                 onChange={(e) => setGeneratorState((current) => ({ ...current, goal: e.target.value }))}
               />
-              <div className="w-full">
-                <label className="mb-2 block text-sm font-medium text-[#F7F7F7]">Experience</label>
-                <select
-                  className="w-full rounded-lg border border-[#2e303a] bg-[#1a1a2e] px-4 py-2.5 text-[#F7F7F7] focus:border-[#00FF88] focus:outline-none focus:ring-1 focus:ring-[#00FF88]"
-                  value={generatorState.experience}
-                  onChange={(e) => setGeneratorState((current) => ({ ...current, experience: e.target.value }))}
-                >
-                  <option value="">Select your level</option>
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
+              <Select
+                label="Experience"
+                placeholder="Select your level"
+                value={generatorState.experience}
+                onChange={(e) => setGeneratorState((current) => ({ ...current, experience: e.target.value }))}
+                options={[
+                  { value: 'beginner', label: 'Beginner' },
+                  { value: 'intermediate', label: 'Intermediate' },
+                  { value: 'advanced', label: 'Advanced' },
+                ]}
+              />
               <Input
                 label="Equipment"
                 placeholder="Dumbbells, bench, resistance bands, bodyweight"

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import axios from 'axios';
 import type { User, AuthTokens } from '../types';
 import { authAPI, getApiErrorMessage } from '../services/api';
+import { toastSuccess, toastError } from '../utils/toast';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -77,14 +78,17 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
           }
+          toastSuccess('Welcome back! 🎉');
         } catch (error) {
           const message = axios.isAxiosError<ApiErrorResponse>(error)
             ? getApiErrorMessage(error.response?.data?.message)
             : undefined;
+          const errorMsg = message || 'Login failed';
           set({
-            error: message || 'Login failed',
+            error: errorMsg,
             isLoading: false,
           });
+          toastError(errorMsg);
           throw error;
         }
       },
@@ -109,14 +113,17 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
           }
+          toastSuccess('Account created! Welcome to FitNova 💪');
         } catch (error) {
           const message = axios.isAxiosError<ApiErrorResponse>(error)
             ? getApiErrorMessage(error.response?.data?.message)
             : undefined;
+          const errorMsg = message || 'Registration failed';
           set({
-            error: message || 'Registration failed',
+            error: errorMsg,
             isLoading: false,
           });
+          toastError(errorMsg);
           throw error;
         }
       },
@@ -130,6 +137,7 @@ export const useAuthStore = create<AuthState>()(
         });
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        toastSuccess('Logged out successfully');
       },
 
       getCurrentUser: async () => {

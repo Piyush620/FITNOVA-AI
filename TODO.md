@@ -22,6 +22,9 @@
 - [x] Tailwind frontend styling pipeline fixed so utilities generate correctly
 - [x] Shared card styles corrected to render proper dark translucent surfaces
 - [x] Frontend TypeScript, lint, and build passing
+- [x] Backend local Fastify startup fixed for exception handling, request logging, and Redis-disabled queue boot
+- [x] Backend build and targeted auth/users unit tests passing
+- [x] Frontend protected-route Vitest coverage added and passing
 - [ ] End-to-end runtime QA across all main user flows
 - [ ] Billing is still scaffold-only
 - [ ] Queue workers are still scaffold-only
@@ -56,6 +59,7 @@
 
 ### 1. Runtime QA
 
+- [ ] Unblock runtime QA by allowing this machine/IP to access the MongoDB Atlas cluster, or switch `MONGODB_URI` to a reachable local database
 - [ ] Test signup end to end against live backend
 - [ ] Test login and refresh-token behavior
 - [ ] Test protected route behavior after token expiry
@@ -65,7 +69,9 @@
 - [ ] Test coach chat with realistic prompts and error states
 
 ### 2. Frontend Polish
-
+- [ ]Complete the calorie tracker detail experience on the diet page
+- [ ] Improve navbar hover/active behavior
+- [ ] Fix refresh persistence for signed-in users
 - [ ] Finish visual refactor for dashboard, workouts, and diet detail sections where older styling still remains
 - [ ] Do one more landing-page polish pass for typography scale and section density after live review
 - [ ] Replace remaining native `select` styling with a shared select pattern
@@ -96,6 +102,8 @@
 ### 6. Testing and Hardening
 
 - [ ] Add backend integration tests for auth, users, workouts, diet, and AI
+- [x] Fix Fastify compatibility in global exception and request-logging paths
+- [x] Realign stale auth/users unit tests with current service contracts
 - [ ] Add frontend smoke/integration tests for auth and protected flows
 - [ ] Add rate limiting and security hardening
 - [ ] Improve logging and monitoring
@@ -150,4 +158,5 @@
 - Real-time course progress/Q&A cannot be implemented here until that backend model and API surface exist
 - Billing and queue modules exist in the codebase, but they are still scaffolds rather than live product features
 - The recent landing-page redesign fixed the worst visual issues, but dashboard/workout/diet screens still need a final consistency pass
+- Runtime QA is currently blocked on MongoDB Atlas access from this machine/IP; backend startup retries before serving requests
 - `.env` files should remain untracked

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Pages
 import { LandingPage } from './pages/Landing';
@@ -22,8 +24,18 @@ function App() {
   }, [getCurrentUser]);
 
   return (
-    <Router>
-      <Routes>
+    <ErrorBoundary>
+      <Router>
+        <Toaster
+          position="top-right"
+          reverseOrder={false}
+          gutter={8}
+          toastOptions={{
+            // Default options
+            duration: 3000,
+          }}
+        />
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -82,7 +94,8 @@ function App() {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

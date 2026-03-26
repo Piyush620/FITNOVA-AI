@@ -2,3 +2,4 @@ export { Button } from './Button';
 export { Input } from './Input';
 export { Card } from './Card';
 export { Pagination } from './Pagination';
+export { Select } from './Select';

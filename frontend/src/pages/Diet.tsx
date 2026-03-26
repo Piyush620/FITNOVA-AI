@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Pagination } from '../components/Common';
+import { Card, Button, Input, Pagination, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, dietAPI, getApiErrorMessage } from '../services/api';
+import { toastSuccess, toastError } from '../utils/toast';
 import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal } from '../types';
 
 type ApiErrorResponse = {
@@ -153,11 +154,14 @@ export const DietPage: React.FC = () => {
       setSelectedPlanId(nextActivePlan.id);
       navigate(`/diet/${nextActivePlan.id}`);
       await loadPlans(false, 1);
+      toastSuccess('Diet plan activated! 🥗');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : undefined;
-      setError(message || 'Failed to activate diet plan.');
+      const errorMsg = message || 'Failed to activate diet plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -178,11 +182,14 @@ export const DietPage: React.FC = () => {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
       }
       await loadPlans();
+      toastSuccess('Meal logged! Nutritional goals on track! 🎯');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : undefined;
-      setError(message || 'Failed to mark meal as complete.');
+      const errorMsg = message || 'Failed to mark meal as complete.';
+      setError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -191,6 +198,7 @@ export const DietPage: React.FC = () => {
   const handleGeneratePlan = async () => {
     if (!generatorState.goal || !generatorState.calories || !generatorState.preference || !generatorState.budget) {
       setGeneratorError('Fill in goal, calories, preference, and budget before generating a plan.');
+      toastError('Please fill in all required fields');
       return;
     }
 
@@ -212,13 +220,16 @@ export const DietPage: React.FC = () => {
       setSelectedPlanId(generatedPlan.id);
       navigate(`/diet/${generatedPlan.id}`);
       await loadPlans();
+      toastSuccess('AI diet plan generated and saved! 🤖🥗');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
         : error instanceof Error
           ? error.message
           : undefined;
-      setGeneratorError(message || 'Failed to generate and save diet plan.');
+      const errorMsg = message || 'Failed to generate and save diet plan.';
+      setGeneratorError(errorMsg);
+      toastError(errorMsg);
     } finally {
       setActionState(null);
     }
@@ -364,39 +375,35 @@ export const DietPage: React.FC = () => {
                   }))
                 }
               />
-              <div className="w-full">
-                <label className="mb-2 block text-sm font-medium text-[#F7F7F7]">Preference</label>
-                <select
-                  className="w-full rounded-lg border border-[#2e303a] bg-[#1a1a2e] px-4 py-2.5 text-[#F7F7F7] focus:border-[#00FF88] focus:outline-none focus:ring-1 focus:ring-[#00FF88]"
-                  value={generatorState.preference}
-                  onChange={(e) =>
-                    setGeneratorState((current) => ({
-                      ...current,
-                      preference: e.target.value as GenerateDietPlanPayload['preference'],
-                    }))
-                  }
-                >
-                  <option value="veg">Veg</option>
-                  <option value="non-veg">Non-veg</option>
-                </select>
-              </div>
-              <div className="w-full">
-                <label className="mb-2 block text-sm font-medium text-[#F7F7F7]">Budget</label>
-                <select
-                  className="w-full rounded-lg border border-[#2e303a] bg-[#1a1a2e] px-4 py-2.5 text-[#F7F7F7] focus:border-[#00FF88] focus:outline-none focus:ring-1 focus:ring-[#00FF88]"
-                  value={generatorState.budget}
-                  onChange={(e) =>
-                    setGeneratorState((current) => ({
-                      ...current,
-                      budget: e.target.value as GenerateDietPlanPayload['budget'],
-                    }))
-                  }
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
+              <Select
+                label="Preference"
+                value={generatorState.preference}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    preference: e.target.value as GenerateDietPlanPayload['preference'],
+                  }))
+                }
+                options={[
+                  { value: 'veg', label: 'Veg' },
+                  { value: 'non-veg', label: 'Non-veg' },
+                ]}
+              />
+              <Select
+                label="Budget"
+                value={generatorState.budget}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    budget: e.target.value as GenerateDietPlanPayload['budget'],
+                  }))
+                }
+                options={[
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
+                ]}
+              />
             </div>
 
             <div className="flex flex-wrap gap-3">

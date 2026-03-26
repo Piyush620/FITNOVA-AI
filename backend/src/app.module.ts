@@ -1,9 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import configuration from './common/config/configuration';
 import { validationSchema } from './common/config/validation.schema';
+import { RequestLoggingMiddleware } from './common/middleware/request-logging.middleware';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DietModule } from './modules/diet/diet.module';
@@ -28,6 +31,12 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
         uri: configService.get<string>('database.mongodbUri'),
       }),
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute (general limit)
+      },
+    ]),
     QueueModule,
     SystemModule,
     AuthModule,
@@ -38,5 +47,15 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
     SubscriptionsModule,
     AiModule,
   ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggingMiddleware).forRoutes('*');
+  }
+}

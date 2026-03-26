@@ -39,7 +39,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).send({
+    response.code(status).send({
       statusCode: status,
       message,
       path: request.url,
