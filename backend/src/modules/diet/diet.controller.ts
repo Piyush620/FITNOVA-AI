@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -54,6 +54,24 @@ export class DietController {
     @Param('planId') planId: string,
   ) {
     return this.dietService.activatePlan(user.sub, planId);
+  }
+
+  @Post('plans/:planId/restart')
+  @ApiOperation({ summary: 'Restart a completed diet plan as a fresh active cycle' })
+  async restartPlan(
+    @CurrentUser() user: JwtPayload,
+    @Param('planId') planId: string,
+  ) {
+    return this.dietService.restartPlan(user.sub, planId);
+  }
+
+  @Delete('plans/:planId')
+  @ApiOperation({ summary: 'Delete a diet plan owned by the current user' })
+  async deletePlan(
+    @CurrentUser() user: JwtPayload,
+    @Param('planId') planId: string,
+  ) {
+    return this.dietService.deletePlan(user.sub, planId);
   }
 
   @Post('plans/:planId/days/:dayNumber/meals/:mealType/complete')

@@ -132,7 +132,11 @@ export class AiService {
     const user = await this.usersService.getCurrentUser(userId);
     const output = await this.generateText(
       'You are FitNova AI, an elite fitness programming assistant.',
-      workoutPrompt(payload),
+      workoutPrompt(payload, {
+        gender: user.profile.gender,
+        goal: user.profile.goal,
+        activityLevel: user.profile.activityLevel,
+      }),
     );
     await this.persistInteraction(userId, AiInteractionType.WORKOUT_PLAN, { ...payload }, output);
 
@@ -153,7 +157,11 @@ export class AiService {
     const user = await this.usersService.getCurrentUser(userId);
     const output = await this.generateText(
       'You are FitNova AI, an expert sports nutrition coach focused on Indian meal planning.',
-      dietPrompt(payload),
+      dietPrompt(payload, {
+        gender: user.profile.gender,
+        goal: user.profile.goal,
+        activityLevel: user.profile.activityLevel,
+      }),
     );
     await this.persistInteraction(userId, AiInteractionType.DIET_PLAN, { ...payload }, output);
 
@@ -171,9 +179,14 @@ export class AiService {
   }
 
   async generateAndSaveWorkoutPlan(userId: string, payload: GenerateWorkoutPlanDto) {
+    const user = await this.usersService.getCurrentUser(userId);
     const output = await this.generateText(
       'You are FitNova AI, an elite fitness programming assistant that returns strict JSON.',
-      structuredWorkoutPrompt(payload),
+      structuredWorkoutPrompt(payload, {
+        gender: user.profile.gender,
+        goal: user.profile.goal,
+        activityLevel: user.profile.activityLevel,
+      }),
     );
     const parsedPlan = this.parseJsonResponse(output) as CreateWorkoutPlanDto;
     const savedPlan = await this.workoutsService.createPlan(userId, parsedPlan);
@@ -196,9 +209,14 @@ export class AiService {
   }
 
   async generateAndSaveDietPlan(userId: string, payload: GenerateDietPlanDto) {
+    const user = await this.usersService.getCurrentUser(userId);
     const output = await this.generateText(
       'You are FitNova AI, an expert Indian nutrition coach that returns strict JSON.',
-      structuredDietPrompt(payload),
+      structuredDietPrompt(payload, {
+        gender: user.profile.gender,
+        goal: user.profile.goal,
+        activityLevel: user.profile.activityLevel,
+      }),
     );
     const parsedPlan = this.normalizeDietPlan(this.parseJsonResponse(output) as CreateDietPlanDto);
     const savedPlan = await this.dietService.createPlan(userId, parsedPlan);

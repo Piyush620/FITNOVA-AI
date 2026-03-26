@@ -101,6 +101,56 @@ export class DietService {
     return this.serializePlan(plan);
   }
 
+  async restartPlan(userId: string, planId: string) {
+    const sourcePlan = await this.findOwnedPlan(userId, planId);
+    await this.deactivateActivePlans(userId);
+
+    sourcePlan.status = DietPlanStatus.ARCHIVED;
+    await sourcePlan.save();
+
+    const restartedPlan = await this.dietPlanModel.create({
+      userId: sourcePlan.userId,
+      title: `${sourcePlan.title} Restart`,
+      goal: sourcePlan.goal,
+      preference: sourcePlan.preference,
+      targetCalories: sourcePlan.targetCalories,
+      days: sourcePlan.days.map((day) => ({
+        dayNumber: day.dayNumber,
+        dayLabel: day.dayLabel,
+        theme: day.theme,
+        targetCalories: day.targetCalories,
+        meals: day.meals.map((meal) => ({
+          type: meal.type,
+          title: meal.title,
+          description: meal.description,
+          items: meal.items,
+          calories: meal.calories,
+          proteinGrams: meal.proteinGrams,
+          carbsGrams: meal.carbsGrams,
+          fatsGrams: meal.fatsGrams,
+          completedAt: undefined,
+        })),
+      })),
+      status: DietPlanStatus.ACTIVE,
+      startDate: new Date(),
+      endDate: undefined,
+      isAiGenerated: sourcePlan.isAiGenerated,
+      notes: sourcePlan.notes,
+    });
+
+    return this.serializePlan(restartedPlan);
+  }
+
+  async deletePlan(userId: string, planId: string) {
+    const plan = await this.findOwnedPlan(userId, planId);
+    await plan.deleteOne();
+
+    return {
+      deleted: true,
+      id: planId,
+    };
+  }
+
   async completeMeal(userId: string, planId: string, dayNumber: number, mealType: string) {
     const plan = await this.findOwnedPlan(userId, planId);
     const dietDay = plan.days.find((day) => day.dayNumber === dayNumber);

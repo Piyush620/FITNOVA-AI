@@ -107,6 +107,55 @@ export class WorkoutsService {
     return this.serializePlan(plan);
   }
 
+  async restartPlan(userId: string, planId: string) {
+    const sourcePlan = await this.findOwnedPlan(userId, planId);
+    await this.deactivateActivePlans(userId);
+
+    sourcePlan.status = WorkoutPlanStatus.ARCHIVED;
+    await sourcePlan.save();
+
+    const restartedPlan = await this.workoutPlanModel.create({
+      userId: sourcePlan.userId,
+      title: `${sourcePlan.title} Restart`,
+      goal: sourcePlan.goal,
+      level: sourcePlan.level,
+      equipment: sourcePlan.equipment,
+      days: sourcePlan.days.map((day) => ({
+        dayNumber: day.dayNumber,
+        dayLabel: day.dayLabel,
+        focus: day.focus,
+        durationMinutes: day.durationMinutes,
+        exercises: day.exercises.map((exercise) => ({
+          name: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          restSeconds: exercise.restSeconds,
+          equipment: exercise.equipment,
+          notes: exercise.notes,
+        })),
+        completedAt: undefined,
+      })),
+      status: WorkoutPlanStatus.ACTIVE,
+      startDate: new Date(),
+      endDate: undefined,
+      isAiGenerated: sourcePlan.isAiGenerated,
+      notes: sourcePlan.notes,
+    });
+
+    return this.serializePlan(restartedPlan);
+  }
+
+  async deletePlan(userId: string, planId: string) {
+    const plan = await this.findOwnedPlan(userId, planId);
+    await plan.deleteOne();
+
+    return {
+      deleted: true,
+      id: planId,
+    };
+  }
+
   async completeSession(userId: string, planId: string, dayNumber: number) {
     const plan = await this.findOwnedPlan(userId, planId);
     const workoutDay = plan.days.find((day) => day.dayNumber === dayNumber);
