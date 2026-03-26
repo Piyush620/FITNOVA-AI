@@ -2,6 +2,7 @@ import { GenerateDietPlanDto } from './dto/generate-diet-plan.dto';
 import { GenerateWorkoutPlanDto } from './dto/generate-workout-plan.dto';
 
 type AiProfileContext = {
+  age?: number;
   gender?: string;
   goal?: string;
   activityLevel?: string;
@@ -12,11 +13,13 @@ export const workoutPrompt = (input: GenerateWorkoutPlanDto, profile?: AiProfile
 weight: ${input.weight}
 goal: ${input.goal}
 level: ${input.experience}
+training days per week: ${input.trainingDaysPerWeek}
 equipment: ${input.equipment}
+age: ${profile?.age ?? 'not provided'}
 gender: ${profile?.gender ?? 'not provided'}
 activity level: ${profile?.activityLevel ?? 'not provided'}
 
-Return a practical 7-day schedule with warm-up, main exercises, sets, reps, rest time, and recovery guidance.`;
+Return a practical weekly schedule with exactly ${input.trainingDaysPerWeek} training days, plus recovery guidance for the remaining days.`;
 
 export const dietPrompt = (input: GenerateDietPlanDto, profile?: AiProfileContext) =>
   `Generate a daily Indian diet plan for:
@@ -46,12 +49,14 @@ export const structuredWorkoutPrompt = (input: GenerateWorkoutPlanDto, profile?:
 weight: ${input.weight}
 goal: ${input.goal}
 level: ${input.experience}
+training days per week: ${input.trainingDaysPerWeek}
 equipment: ${input.equipment}
+age: ${profile?.age ?? 'not provided'}
 gender: ${profile?.gender ?? 'not provided'}
 activity level: ${profile?.activityLevel ?? 'not provided'}
 
 Important:
-- adapt exercise selection, recovery emphasis, and coaching cues appropriately for the provided gender when useful
+- adapt exercise selection, volume, recovery emphasis, and coaching cues appropriately for the provided age and gender when useful
 - avoid stereotypes and keep the plan goal-driven, safe, and practical
 
 Return ONLY valid JSON with this shape:
@@ -85,7 +90,7 @@ Return ONLY valid JSON with this shape:
 }
 
 Constraints:
-- include 4 to 7 day entries
+- include exactly ${input.trainingDaysPerWeek} day entries
 - keep dayNumber unique and in ascending order
 - no markdown fences
 - no prose outside JSON`;

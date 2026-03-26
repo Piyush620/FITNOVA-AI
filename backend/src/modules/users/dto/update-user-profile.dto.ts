@@ -24,6 +24,12 @@ export class UpdateUserProfileDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  @MaxLength(2000000)
+  avatarUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsInt()
   @Min(13)
   @Max(100)

@@ -133,6 +133,7 @@ export class AiService {
     const output = await this.generateText(
       'You are FitNova AI, an elite fitness programming assistant.',
       workoutPrompt(payload, {
+        age: user.profile.age,
         gender: user.profile.gender,
         goal: user.profile.goal,
         activityLevel: user.profile.activityLevel,
@@ -183,6 +184,7 @@ export class AiService {
     const output = await this.generateText(
       'You are FitNova AI, an elite fitness programming assistant that returns strict JSON.',
       structuredWorkoutPrompt(payload, {
+        age: user.profile.age,
         gender: user.profile.gender,
         goal: user.profile.goal,
         activityLevel: user.profile.activityLevel,

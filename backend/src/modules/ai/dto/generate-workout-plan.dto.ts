@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MaxLength } from 'class-validator';
+import { IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class GenerateWorkoutPlanDto {
   @ApiProperty()
@@ -16,6 +16,12 @@ export class GenerateWorkoutPlanDto {
   @IsString()
   @MaxLength(40)
   experience!: string;
+
+  @ApiProperty({ minimum: 3, maximum: 7 })
+  @IsInt()
+  @Min(3)
+  @Max(7)
+  trainingDaysPerWeek!: number;
 
   @ApiProperty()
   @IsString()

@@ -11,6 +11,9 @@ export class UserProfile {
   fullName!: string;
 
   @Prop()
+  avatarUrl?: string;
+
+  @Prop()
   age?: number;
 
   @Prop()
