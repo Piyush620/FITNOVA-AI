@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Button, Input, Card } from '../components/Common';
+import { Button, Input, Card, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage } from '../services/api';
 
@@ -12,18 +12,26 @@ type ApiErrorResponse = {
 
 export const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register, isLoading, error, clearError } = useAuth();
+  const { register, isLoading, error, clearError, isAuthenticated, hasHydrated } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    age: '',
+    gender: 'other',
     heightCm: '',
     weightKg: '',
     goal: '',
     activityLevel: 'moderate',
   });
   const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [hasHydrated, isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -42,6 +50,7 @@ export const SignupPage: React.FC = () => {
       !formData.email ||
       !formData.password ||
       !formData.confirmPassword ||
+      !formData.age ||
       !formData.heightCm ||
       !formData.weightKg ||
       !formData.goal
@@ -60,8 +69,14 @@ export const SignupPage: React.FC = () => {
       return;
     }
 
+    const age = Number(formData.age);
     const heightCm = Number(formData.heightCm);
     const weightKg = Number(formData.weightKg);
+
+    if (age < 13 || age > 100) {
+      setLocalError('Age must be between 13 and 100');
+      return;
+    }
 
     if (heightCm < 100 || heightCm > 250) {
       setLocalError('Height must be between 100 cm and 250 cm');
@@ -78,6 +93,8 @@ export const SignupPage: React.FC = () => {
         email: formData.email,
         password: formData.password,
         fullName: formData.name,
+        age,
+        gender: formData.gender as 'male' | 'female' | 'other',
         heightCm,
         weightKg,
         goal: formData.goal,
@@ -128,6 +145,26 @@ export const SignupPage: React.FC = () => {
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Age"
+                  type="number"
+                  name="age"
+                  placeholder="24"
+                  value={formData.age}
+                  onChange={handleChange}
+                />
+                <Select
+                  label="Gender"
+                  value={formData.gender}
+                  onChange={(e) =>
+                    setFormData((current) => ({ ...current, gender: e.target.value }))
+                  }
+                  options={[
+                    { value: 'male', label: 'Male' },
+                    { value: 'female', label: 'Female' },
+                    { value: 'other', label: 'Other' },
+                  ]}
+                />
                 <Input
                   label="Height (cm)"
                   type="number"

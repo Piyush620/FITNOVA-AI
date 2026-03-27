@@ -5,6 +5,7 @@ export const useAuth = () => {
     user,
     accessToken,
     isLoading,
+    hasHydrated,
     error,
     login,
     register,
@@ -15,13 +16,16 @@ export const useAuth = () => {
   } = useAuthStore();
 
   const isAuthenticated = !!accessToken && !!user;
+  const hasSession = !!accessToken;
 
   return {
     user,
     accessToken,
     isLoading,
+    hasHydrated,
     error,
     isAuthenticated,
+    hasSession,
     login,
     register,
     logout,

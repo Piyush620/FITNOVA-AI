@@ -21,7 +21,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        'rounded-2xl border p-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)]',
+        'rounded-2xl border p-6 shadow-[0_12px_40px_rgba(0,0,0,0.18)] transition-transform duration-300 motion-safe:[animation:fadeUp_420ms_ease-out] motion-safe:hover:-translate-y-0.5',
         variantClasses[variant],
         className
       )}

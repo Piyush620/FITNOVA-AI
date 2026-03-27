@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input } from '../components/Common';
+import { Card, Button, Textarea } from '../components/Common';
 import { aiAPI } from '../services/api';
+import heroImage from '../assets/hero.png';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -17,22 +18,21 @@ type ApiErrorResponse = {
   message?: string;
 };
 
-const initialMessage: ChatMessage = {
-  id: 'welcome',
-  role: 'assistant',
-  content:
-    "Hey! I'm your FitNova AI coach. Ask me about workouts, recovery, nutrition, consistency, or how to adjust your plan.",
-};
+const starterPrompts = [
+  'I missed two workouts this week. How should I adjust without falling behind?',
+  'Give me a simple fat-loss meal structure for a packed workday.',
+  'My recovery has been slow lately. What should I change first?',
+];
 
 export const CoachChatPage: React.FC = () => {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([initialMessage]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, isSending]);
 
   const handleSendMessage = async () => {
@@ -56,13 +56,13 @@ export const CoachChatPage: React.FC = () => {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
         content: response.data.reply,
-        meta: `${response.data.provider} • ${response.data.model}`,
+        meta: `${response.data.provider} | ${response.data.model}`,
       };
 
       setMessages((current) => [...current, assistantMessage]);
-    } catch (error) {
-      const nextError = axios.isAxiosError<ApiErrorResponse>(error)
-        ? error.response?.data?.message
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? requestError.response?.data?.message
         : undefined;
 
       setError(nextError || 'The coach could not respond right now. Please try again.');
@@ -82,60 +82,142 @@ export const CoachChatPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="grid w-full gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <section className="space-y-6">
-          <Card variant="gradient" className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#00FF88]">
-                AI Coach
-              </p>
-              <h1 className="text-3xl font-bold text-[#F7F7F7]">Real-time fitness guidance</h1>
+      <div className="w-full space-y-6 lg:space-y-8">
+        <Card variant="gradient" className="overflow-hidden p-0">
+          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="relative overflow-hidden px-6 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-11">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.1),transparent_28%)]" />
+              <div className="relative max-w-3xl space-y-5">
+                <div className="inline-flex items-center rounded-full border border-white/10 bg-black/25 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00FF88] backdrop-blur">
+                  Coach Mode
+                </div>
+                <div className="space-y-4">
+                  <h1 className="text-3xl font-black leading-[0.95] text-[#F7F7F7] sm:text-4xl lg:text-[3.5rem]">
+                    Ask one sharp question.
+                    <span className="block text-[#98a3b8]">Get one useful next move.</span>
+                  </h1>
+                  <p className="max-w-2xl text-sm leading-7 text-[#b8c0d2] sm:text-base">
+                    Use the coach for training adjustments, recovery decisions, and practical diet
+                    fixes when real life throws your week off.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#8f97ab]">Status</p>
+                    <p className="mt-2 text-lg font-bold text-[#00FF88]">
+                      {isSending ? 'Thinking' : 'Ready'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#8f97ab]">Messages</p>
+                    <p className="mt-2 text-lg font-bold text-[#F7F7F7]">{messages.length}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#8f97ab]">Focus</p>
+                    <p className="mt-2 text-lg font-bold text-[#F7F7F7]">Recovery and consistency</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">
+                    Try one of these
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {starterPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        type="button"
+                        onClick={() => setMessage(prompt)}
+                        className="rounded-full border border-[#2e303a] bg-[#11131d]/90 px-4 py-2.5 text-left text-sm text-[#d8dce6] transition-all duration-300 hover:border-[#00FF88]/45 hover:bg-[#141a28]"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-sm leading-6 text-gray-400">
-              Use this coach for training questions, meal tweaks, recovery decisions, and consistency problems while you work through your plans.
-            </p>
-            <div className="space-y-3 border-t border-[#2e303a] pt-4 text-sm text-gray-400">
-              <p>Ask specific questions for better answers.</p>
-              <p>Include your goal, current problem, and what equipment or food options you have.</p>
-              <p>The chat resets locally if you clear it, but backend AI history is still stored.</p>
+
+            <div className="relative min-h-[280px] overflow-hidden border-t border-white/10 lg:min-h-full lg:border-l lg:border-t-0">
+              <img src={heroImage} alt="Coach visual" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(7,10,18,0.26)_0%,rgba(7,10,18,0.58)_50%,rgba(7,10,18,0.9)_100%)]" />
+              <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+                <div className="max-w-sm rounded-[1.75rem] border border-white/10 bg-black/35 p-5 backdrop-blur-md">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
+                    Better prompts
+                  </p>
+                  <p className="mt-3 text-xl font-bold leading-snug text-[#F7F7F7]">
+                    Mention your goal, the problem, and what changed this week.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {error ? (
+          <div className="rounded-2xl border border-[#FF6B00] bg-[#FF6B00]/10 px-5 py-4 text-sm text-[#FFB27A]">
+            {error}
+          </div>
+        ) : null}
+
+        <Card
+          variant="glass"
+          className="overflow-hidden rounded-[2rem] border-white/10 bg-[linear-gradient(180deg,rgba(18,22,36,0.92)_0%,rgba(13,16,28,0.98)_100%)] p-0"
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-7">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">
+                Conversation
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-[#F7F7F7]">AI Coach Chat</h2>
             </div>
             <Button
               variant="secondary"
+              size="sm"
               onClick={() => {
-                setMessages([initialMessage]);
+                setMessages([]);
                 setError('');
               }}
               disabled={isSending}
+              className="border-white/10 bg-white/5"
             >
               Clear Chat
             </Button>
-          </Card>
-        </section>
+          </div>
 
-        <section className="space-y-4">
-          {error ? (
-            <div className="rounded-xl border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-sm text-[#FF6B00]">
-              {error}
-            </div>
-          ) : null}
+          <div className="flex min-h-[560px] flex-col">
+            <div className="flex-1 space-y-5 px-5 py-6 sm:px-7">
+              {messages.length === 0 && !isSending ? (
+                <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.03] px-5 py-6 sm:px-7 sm:py-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
+                    Warm start
+                  </p>
+                  <h3 className="mt-3 text-2xl font-bold text-[#F7F7F7]">
+                    Start with the thing blocking you most.
+                  </h3>
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-[#9da8bf] sm:text-base">
+                    Missed sessions, flat energy, diet confusion, or poor recovery are all good starting points.
+                    Ask for the next adjustment, not the perfect plan.
+                  </p>
+                </div>
+              ) : null}
 
-          <Card variant="gradient" className="flex h-[640px] flex-col p-5 sm:p-6">
-            <div className="mb-5 flex-1 space-y-4 overflow-y-auto pr-1">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-xs rounded-2xl p-4 sm:max-w-xl lg:max-w-2xl ${
+                    className={`max-w-full rounded-[1.6rem] px-5 py-4 sm:max-w-2xl ${
                       msg.role === 'user'
-                        ? 'bg-white text-black'
-                        : 'border border-[#2e303a] bg-[#11131d] text-[#F7F7F7]'
+                        ? 'bg-white text-black shadow-[0_18px_40px_rgba(255,255,255,0.08)]'
+                        : 'border border-white/10 bg-white/[0.04] text-[#F7F7F7]'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap text-sm leading-6">{msg.content}</p>
+                    <p className="whitespace-pre-wrap text-sm leading-7 sm:text-[15px]">{msg.content}</p>
                     {msg.meta ? (
-                      <p className="mt-3 text-xs uppercase tracking-[0.15em] text-gray-400">{msg.meta}</p>
+                      <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-[#8f97ab]">
+                        {msg.meta}
+                      </p>
                     ) : null}
                   </div>
                 </div>
@@ -143,8 +225,8 @@ export const CoachChatPage: React.FC = () => {
 
               {isSending ? (
                 <div className="flex justify-start">
-                  <div className="max-w-xs rounded-2xl border border-[#2e303a] bg-[#11131d] p-4 text-[#F7F7F7] lg:max-w-md">
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] px-5 py-4 text-[#F7F7F7]">
+                    <div className="flex items-center gap-2 text-sm text-[#aeb7cb]">
                       <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF88]"></span>
                       Coach is thinking...
                     </div>
@@ -155,9 +237,9 @@ export const CoachChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-[#2e303a] pt-4">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Input
+            <div className="border-t border-white/10 bg-black/15 px-5 py-5 sm:px-7">
+              <div className="space-y-3">
+                <Textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => {
@@ -166,23 +248,30 @@ export const CoachChatPage: React.FC = () => {
                       void handleSendMessage();
                     }
                   }}
-                  placeholder="Ask me anything about fitness..."
-                  className="flex-1"
+                  rows={5}
+                  placeholder="Ask about your training, recovery, diet, or how to adjust the week..."
+                  className="min-h-[132px] rounded-[1.5rem] border-white/10 bg-white/[0.04] px-5 py-4"
                   disabled={isSending}
                 />
-                <Button
-                  variant="primary"
-                  onClick={() => void handleSendMessage()}
-                  disabled={!message.trim()}
-                  isLoading={isSending}
-                  className="sm:self-end"
-                >
-                  Send
-                </Button>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-[#8f97ab]">
+                    Press Enter to send. Use Shift + Enter for a new line.
+                  </p>
+                  <Button
+                    variant="accent"
+                    size="md"
+                    onClick={() => void handleSendMessage()}
+                    disabled={!message.trim()}
+                    isLoading={isSending}
+                    className="self-start sm:self-auto"
+                  >
+                    Send Message
+                  </Button>
+                </div>
               </div>
             </div>
-          </Card>
-        </section>
+          </div>
+        </Card>
       </div>
     </MainLayout>
   );

@@ -43,6 +43,17 @@ type CoachChatResponse = {
   generatedAt: string;
 };
 
+type UpdateUserProfilePayload = {
+  fullName?: string;
+  avatarUrl?: string;
+  age?: number;
+  gender?: string;
+  heightCm?: number;
+  weightKg?: number;
+  goal?: string;
+  activityLevel?: string;
+};
+
 type RetryableRequestConfig = {
   _retry?: boolean;
   headers?: {
@@ -123,7 +134,7 @@ export const usersAPI = {
 
   getDashboard: () => apiClient.get<DashboardSummary>('/users/me/dashboard'),
 
-  updateProfile: (payload: Partial<User>) =>
+  updateProfile: (payload: UpdateUserProfilePayload) =>
     apiClient.patch<User>('/users/me', payload),
 };
 
@@ -138,6 +149,10 @@ export const workoutsAPI = {
   createPlan: (payload: PlanMutationPayload) => apiClient.post<WorkoutPlan>('/workouts/plans', payload),
 
   activatePlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/activate`, {}),
+
+  restartPlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/restart`, {}),
+
+  deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/workouts/plans/${planId}`),
 
   completeSession: (planId: string, dayNumber: number) =>
     apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/sessions/${dayNumber}/complete`, {}),
@@ -154,6 +169,10 @@ export const dietAPI = {
   createPlan: (payload: PlanMutationPayload) => apiClient.post<DietPlan>('/diet/plans', payload),
 
   activatePlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/activate`, {}),
+
+  restartPlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/restart`, {}),
+
+  deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/diet/plans/${planId}`),
 
   completeMeal: (planId: string, dayNumber: number, mealType: string) =>
     apiClient.post<DietPlan>(`/diet/plans/${planId}/days/${dayNumber}/meals/${mealType}/complete`, {}),

@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Pagination, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, Pagination, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { GenerateWorkoutPlanPayload, WorkoutDay, WorkoutPlan } from '../types';
+import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -45,10 +46,20 @@ const getStatusClasses = (status: WorkoutPlan['status']) => {
   }
 };
 
+const getWorkoutDurationSummary = (plan: WorkoutPlan) => {
+  const durations = plan.days.map((day) => day.durationMinutes).filter((value): value is number => typeof value === 'number');
+  if (durations.length === 0) {
+    return 'Flexible';
+  }
+
+  return `${Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)} min avg`;
+};
+
 const defaultGeneratorState: GenerateWorkoutPlanPayload = {
   weight: '',
   goal: '',
   experience: '',
+  trainingDaysPerWeek: 4,
   equipment: '',
 };
 
@@ -67,7 +78,7 @@ export const WorkoutsPage: React.FC = () => {
   const [generatorState, setGeneratorState] = useState<GenerateWorkoutPlanPayload>(defaultGeneratorState);
   const [generatorError, setGeneratorError] = useState('');
   const [actionState, setActionState] = useState<
-    { type: 'activate' | 'complete' | 'generate'; key: string } | null
+    { type: 'activate' | 'complete' | 'generate' | 'restart' | 'delete'; key: string } | null
   >(null);
   const [error, setError] = useState('');
 
@@ -76,6 +87,7 @@ export const WorkoutsPage: React.FC = () => {
       weight: user?.profile?.weightKg?.toString() ?? user?.profile?.weight?.toString() ?? '',
       goal: user?.profile?.goal ?? '',
       experience: user?.profile?.activityLevel ?? user?.profile?.level ?? '',
+      trainingDaysPerWeek: 4,
       equipment: '',
     });
   }, [user]);
@@ -135,6 +147,16 @@ export const WorkoutsPage: React.FC = () => {
     activePlan ??
     plans[0] ??
     null;
+  const selectedPlanCompletedDays =
+    selectedPlan?.progress?.completedDays ??
+    selectedPlan?.days.filter((day) => !!day.completedAt).length ??
+    0;
+  const selectedPlanTotalDays =
+    selectedPlan?.progress?.totalDays ??
+    selectedPlan?.days.length ??
+    0;
+  const selectedPlanCompletionRate =
+    selectedPlanTotalDays > 0 ? Math.round((selectedPlanCompletedDays / selectedPlanTotalDays) * 100) : 0;
 
   const handleActivatePlan = async (planId: string) => {
     setActionState({ type: 'activate', key: planId });
@@ -147,7 +169,7 @@ export const WorkoutsPage: React.FC = () => {
       setSelectedPlanId(nextActivePlan.id);
       navigate(`/workouts/${nextActivePlan.id}`);
       await loadPlans();
-      toastSuccess('Workout plan activated! 💪');
+      toastSuccess('Workout plan activated!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -177,7 +199,7 @@ export const WorkoutsPage: React.FC = () => {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
       }
       await loadPlans();
-      toastSuccess('Workout completed! Great job! 🎉');
+      toastSuccess('Workout completed! Great job!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -190,9 +212,76 @@ export const WorkoutsPage: React.FC = () => {
     }
   };
 
+  const handleRestartPlan = async (planId: string) => {
+    setActionState({ type: 'restart', key: planId });
+    setError('');
+
+    try {
+      const response = await workoutsAPI.restartPlan(planId);
+      const restartedPlan = response.data;
+      setActivePlan(restartedPlan);
+      setSelectedPlanId(restartedPlan.id);
+      navigate(`/workouts/${restartedPlan.id}`);
+      await loadPlans(false, 1);
+      toastSuccess('Workout week restarted. Fresh cycle ready!');
+    } catch (error) {
+      const message = axios.isAxiosError<ApiErrorResponse>(error)
+        ? getApiErrorMessage(error.response?.data?.message)
+        : undefined;
+      const errorMsg = message || 'Failed to restart workout plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    const confirmed = window.confirm('Delete this workout plan permanently? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionState({ type: 'delete', key: planId });
+    setError('');
+
+    try {
+      await workoutsAPI.deletePlan(planId);
+      const remainingPlans = plans.filter((plan) => plan.id !== planId);
+      const nextSelectedPlanId =
+        selectedPlanId === planId ? (remainingPlans[0]?.id ?? null) : selectedPlanId;
+
+      setPlans(remainingPlans);
+      setSelectedPlanId(nextSelectedPlanId);
+      if (activePlan?.id === planId) {
+        setActivePlan(remainingPlans.find((plan) => plan.status === 'active') ?? null);
+      }
+      if (id === planId) {
+        navigate('/workouts');
+      }
+      await loadPlans(false, 1);
+      toastSuccess('Workout plan deleted.');
+    } catch (error) {
+      const message = axios.isAxiosError<ApiErrorResponse>(error)
+        ? getApiErrorMessage(error.response?.data?.message)
+        : undefined;
+      const errorMsg = message || 'Failed to delete workout plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
+    } finally {
+      setActionState(null);
+    }
+  };
+
   const handleGeneratePlan = async () => {
-    if (!generatorState.weight || !generatorState.goal || !generatorState.experience || !generatorState.equipment) {
-      setGeneratorError('Fill in weight, goal, experience, and equipment before generating a plan.');
+    if (
+      !generatorState.weight ||
+      !generatorState.goal ||
+      !generatorState.experience ||
+      !generatorState.equipment ||
+      !generatorState.trainingDaysPerWeek
+    ) {
+      setGeneratorError('Fill in weight, goal, experience, training days, and equipment before generating a plan.');
       toastError('Please fill in all required fields');
       return;
     }
@@ -218,7 +307,7 @@ export const WorkoutsPage: React.FC = () => {
       setSelectedPlanId(generatedPlan.id);
       navigate(`/workouts/${generatedPlan.id}`);
       await loadPlans(false, 1);
-      toastSuccess('AI workout plan generated and saved! 🤖💪');
+      toastSuccess('AI workout plan generated and saved!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -236,6 +325,7 @@ export const WorkoutsPage: React.FC = () => {
   const renderDayCard = (planId: string, day: WorkoutDay) => {
     const isCompleted = !!day.completedAt;
     const isCompleting = actionState?.type === 'complete' && actionState.key === `${planId}:${day.dayNumber}`;
+    const exerciseCount = day.exercises.length;
 
     return (
       <Card key={day.dayNumber} className="space-y-4">
@@ -253,13 +343,20 @@ export const WorkoutsPage: React.FC = () => {
             </div>
             <h3 className="mt-2 text-xl font-bold text-[#F7F7F7]">{day.dayLabel}</h3>
             <p className="mt-1 text-gray-400">{day.focus}</p>
-            <p className="mt-2 text-sm text-gray-500">
-              {day.durationMinutes ? `${day.durationMinutes} min` : 'Flexible duration'}
-            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-500">
+              <span className="rounded-full border border-[#2e303a] px-3 py-1">
+                {day.durationMinutes ? `${day.durationMinutes} min` : 'Flexible duration'}
+              </span>
+              <span className="rounded-full border border-[#2e303a] px-3 py-1">
+                {exerciseCount} exercise{exerciseCount === 1 ? '' : 's'}
+              </span>
+            </div>
           </div>
           {!isCompleted && selectedPlan?.status === 'active' && (
             <Button
               size="sm"
+              variant="accent"
+              className="min-w-[148px]"
               onClick={() => void handleCompleteDay(planId, day.dayNumber)}
               isLoading={isCompleting}
             >
@@ -279,8 +376,8 @@ export const WorkoutsPage: React.FC = () => {
                   <p className="font-semibold text-[#F7F7F7]">{exercise.name}</p>
                   <p className="text-sm text-gray-400">
                     {exercise.sets} sets x {exercise.reps}
-                    {exercise.muscleGroup ? ` • ${exercise.muscleGroup}` : ''}
-                    {exercise.equipment ? ` • ${exercise.equipment}` : ''}
+                    {exercise.muscleGroup ? ` | ${exercise.muscleGroup}` : ''}
+                    {exercise.equipment ? ` | ${exercise.equipment}` : ''}
                   </p>
                 </div>
                 {exercise.restSeconds ? (
@@ -300,23 +397,93 @@ export const WorkoutsPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-[#F7F7F7]">Workout Plans</h1>
-            <p className="mt-2 text-gray-400">View your plans, activate a routine, and track completed sessions.</p>
+        <Card variant="gradient" className="overflow-hidden p-0">
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Breadcrumbs
+                  items={[
+                    { label: 'Dashboard', onClick: () => navigate('/dashboard') },
+                    { label: 'Workouts', isCurrent: true },
+                  ]}
+                />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Training Arsenal</p>
+                <h1 className="text-3xl font-black leading-[1.02] text-[#F7F7F7] sm:text-4xl lg:text-[4.25rem]">
+                  Build your
+                  <span className="mt-1 block text-[#00FF88]">
+                    strongest <span className="text-[#F7F7F7]">week.</span>
+                  </span>
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 text-gray-400 sm:text-base">
+                  Generate precise training splits, activate the right cycle, and turn completed sessions into visible momentum.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
+                  Refresh
+                </Button>
+                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                  Generate New Plan
+                </Button>
+                <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
+                  {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Plans loaded</p>
+                  <p className="text-3xl font-bold text-[#F7F7F7]">{plans.length}</p>
+                </Card>
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Active cycle</p>
+                  <p className="text-3xl font-bold text-[#00FF88]">{activePlan ? 'Live' : 'Idle'}</p>
+                </Card>
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Completion</p>
+                  <p className="text-3xl font-bold text-[#F7F7F7]">{selectedPlanCompletionRate}%</p>
+                </Card>
+              </div>
+            </div>
+
+            <Card className="overflow-hidden p-0">
+              <div className="relative min-h-full">
+                <img src={heroImage} alt="Workout visual" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.58)_48%,rgba(5,5,5,0.94)_100%)]" />
+                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                  <div className="inline-flex self-start rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
+                    Strength Mode
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-2xl font-bold leading-tight text-[#F7F7F7]">
+                        {selectedPlan?.title || 'Focused performance split'}
+                      </h2>
+                      <p className="mt-2 max-w-sm text-sm leading-6 text-[#d7dce6]">
+                        Lock into a split that matches your goal, your available equipment, and the number of days you can actually train.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Days</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">{selectedPlan?.days.length ?? 0}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Duration</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                          {selectedPlan ? getWorkoutDurationSummary(selectedPlan) : 'Flexible'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Status</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7] capitalize">{selectedPlan?.status || 'draft'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
-              Refresh
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-              Generate New Plan
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
-              {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
-            </Button>
-          </div>
-        </div>
+        </Card>
 
         {showGenerator ? (
           <Card variant="gradient" className="space-y-5">
@@ -360,6 +527,23 @@ export const WorkoutsPage: React.FC = () => {
                   { value: 'advanced', label: 'Advanced' },
                 ]}
               />
+              <Select
+                label="Training Days Per Week"
+                value={String(generatorState.trainingDaysPerWeek)}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    trainingDaysPerWeek: Number(e.target.value),
+                  }))
+                }
+                options={[
+                  { value: '3', label: '3 days' },
+                  { value: '4', label: '4 days' },
+                  { value: '5', label: '5 days' },
+                  { value: '6', label: '6 days' },
+                  { value: '7', label: '7 days' },
+                ]}
+              />
               <Input
                 label="Equipment"
                 placeholder="Dumbbells, bench, resistance bands, bodyweight"
@@ -380,6 +564,7 @@ export const WorkoutsPage: React.FC = () => {
                     weight: user?.profile?.weightKg?.toString() ?? user?.profile?.weight?.toString() ?? '',
                     goal: user?.profile?.goal ?? '',
                     experience: user?.profile?.activityLevel ?? user?.profile?.level ?? '',
+                    trainingDaysPerWeek: 4,
                     equipment: '',
                   });
                   setGeneratorError('');
@@ -400,10 +585,15 @@ export const WorkoutsPage: React.FC = () => {
 
         {isLoading ? (
           <Card variant="gradient">
-            <div className="py-12 text-center">
-              <p className="mb-6 text-lg text-gray-400">Loading your workout plans...</p>
-              <div className="inline-flex animate-spin">
-                <div className="h-8 w-8 rounded-full border-4 border-[#00FF88] border-t-transparent"></div>
+            <div className="space-y-5">
+              <div className="h-8 w-56 animate-pulse rounded-2xl bg-[#1a2030]" />
+              <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-48 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+                  ))}
+                </div>
+                <div className="h-[620px] animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
               </div>
             </div>
           </Card>
@@ -412,8 +602,13 @@ export const WorkoutsPage: React.FC = () => {
             <div className="space-y-4 py-12 text-center">
               <h2 className="text-2xl font-bold text-[#F7F7F7]">No workout plans yet</h2>
               <p className="mx-auto max-w-2xl text-gray-400">
-                Generate one with AI above, or add a manual creation flow next.
+                Start with an AI split using your goal, experience level, training days, and equipment so your week feels realistic from day one.
               </p>
+              <div className="flex justify-center">
+                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                  Open AI Generator
+                </Button>
+              </div>
             </div>
           </Card>
         ) : (
@@ -422,6 +617,8 @@ export const WorkoutsPage: React.FC = () => {
               {plans.map((plan) => {
                 const isSelected = selectedPlan?.id === plan.id;
                 const isActivating = actionState?.type === 'activate' && actionState.key === plan.id;
+                const isRestarting = actionState?.type === 'restart' && actionState.key === plan.id;
+                const isDeleting = actionState?.type === 'delete' && actionState.key === plan.id;
 
                 return (
                   <Card
@@ -469,7 +666,16 @@ export const WorkoutsPage: React.FC = () => {
                       >
                         View Details
                       </Button>
-                      {plan.status !== 'active' ? (
+                      {plan.status === 'completed' ? (
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          onClick={() => void handleRestartPlan(plan.id)}
+                          isLoading={isRestarting}
+                        >
+                          Restart Week
+                        </Button>
+                      ) : plan.status !== 'active' ? (
                         <Button
                           size="sm"
                           onClick={() => void handleActivatePlan(plan.id)}
@@ -478,6 +684,15 @@ export const WorkoutsPage: React.FC = () => {
                           Activate
                         </Button>
                       ) : null}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                        onClick={() => void handleDeletePlan(plan.id)}
+                        isLoading={isDeleting}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </Card>
                 );
@@ -492,7 +707,10 @@ export const WorkoutsPage: React.FC = () => {
 
             {selectedPlan ? (
               <div className="space-y-6">
-                <Card variant="gradient" className="space-y-5">
+                <Card variant="gradient" className="overflow-hidden p-0">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.12),transparent_22%)]" />
+                    <div className="relative space-y-5 p-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="mb-3 flex items-center gap-3">
@@ -516,11 +734,89 @@ export const WorkoutsPage: React.FC = () => {
                     </div>
                   </div>
 
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Plan completion</p>
+                      <p className="mt-2 text-2xl font-bold text-[#00FF88]">{selectedPlanCompletionRate}%</p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Training days</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{selectedPlan.days.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Average session</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{getWorkoutDurationSummary(selectedPlan)}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Equipment setup</p>
+                      <p className="mt-2 text-base font-semibold text-[#F7F7F7]">
+                        {selectedPlan.equipment.length > 0 ? selectedPlan.equipment.length : 'Bodyweight'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Consistency tracker</p>
+                        <p className="mt-2 text-sm text-gray-400">
+                          Work through each day in order and use the completion actions to keep your weekly momentum visible.
+                        </p>
+                      </div>
+                      <div className="min-w-[220px]">
+                        <div className="flex items-center justify-between text-sm text-gray-400">
+                          <span>Days completed</span>
+                          <span className="font-semibold text-[#F7F7F7]">
+                            {selectedPlanCompletedDays}/{selectedPlanTotalDays}
+                          </span>
+                        </div>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b1e2a]">
+                          <div
+                            className="h-full rounded-full bg-[#00FF88] transition-all"
+                            style={{ width: `${selectedPlanCompletionRate}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {selectedPlan.notes ? (
                     <div className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4 text-gray-300">
                       {selectedPlan.notes}
                     </div>
                   ) : null}
+
+                  {selectedPlan.status === 'completed' ? (
+                    <div className="flex flex-col gap-4 rounded-2xl border border-[#00FF88]/40 bg-[#00FF88]/10 p-5 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-lg font-semibold text-[#F7F7F7]">Week completed</p>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Start the same split again with all days reset and a fresh active cycle.
+                        </p>
+                      </div>
+                      <Button
+                        variant="accent"
+                        className="min-w-[168px]"
+                        onClick={() => void handleRestartPlan(selectedPlan.id)}
+                        isLoading={actionState?.type === 'restart' && actionState.key === selectedPlan.id}
+                      >
+                        Restart Week
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end">
+                    <Button
+                      variant="secondary"
+                      className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                      onClick={() => void handleDeletePlan(selectedPlan.id)}
+                      isLoading={actionState?.type === 'delete' && actionState.key === selectedPlan.id}
+                    >
+                      Delete Plan
+                    </Button>
+                  </div>
+                    </div>
+                  </div>
                 </Card>
 
                 <div className="space-y-4">
@@ -534,3 +830,4 @@ export const WorkoutsPage: React.FC = () => {
     </MainLayout>
   );
 };
+

@@ -7,15 +7,15 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, getCurrentUser, isLoading } = useAuth();
+  const { isAuthenticated, hasSession, hasHydrated, getCurrentUser, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
-      getCurrentUser();
+    if (hasHydrated && hasSession && !isAuthenticated && !isLoading) {
+      void getCurrentUser();
     }
-  }, [isAuthenticated, isLoading, getCurrentUser]);
+  }, [getCurrentUser, hasHydrated, hasSession, isAuthenticated, isLoading]);
 
-  if (isLoading) {
+  if (!hasHydrated || isLoading || (hasSession && !isAuthenticated)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0B0B0B]">
         <div className="animate-spin">

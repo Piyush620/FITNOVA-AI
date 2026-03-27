@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -12,20 +12,40 @@ import { DashboardPage } from './pages/Dashboard';
 import { WorkoutsPage } from './pages/Workouts';
 import { DietPage } from './pages/Diet';
 import { CoachChatPage } from './pages/CoachChat';
+import { ProfilePage } from './pages/Profile';
 
 // Components
 import { ProtectedRoute } from './components/ProtectedRoute';
 
+function ScrollToTop() {
+  const location = useLocation();
+
+  useLayoutEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.key]);
+
+  return null;
+}
+
 function App() {
-  const { getCurrentUser } = useAuth();
+  const { getCurrentUser, hasHydrated, hasSession, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    getCurrentUser();
-  }, [getCurrentUser]);
+    if (hasHydrated && hasSession && !isAuthenticated && !isLoading) {
+      void getCurrentUser();
+    }
+  }, [getCurrentUser, hasHydrated, hasSession, isAuthenticated, isLoading]);
 
   return (
     <ErrorBoundary>
       <Router>
+        <ScrollToTop />
         <Toaster
           position="top-right"
           reverseOrder={false}
@@ -87,6 +107,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CoachChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

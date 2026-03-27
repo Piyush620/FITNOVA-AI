@@ -4,6 +4,7 @@ export interface User {
   roles: Array<'user' | 'admin'>;
   profile: {
     fullName?: string;
+    avatarUrl?: string;
     age?: number;
     gender?: string;
     goal?: string;
@@ -26,6 +27,8 @@ export interface RegisterPayload {
   email: string;
   password: string;
   fullName: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
   heightCm?: number;
   weightKg?: number;
   goal?: string;
@@ -175,12 +178,16 @@ export interface GenerateWorkoutPlanPayload {
   weight: string;
   goal: string;
   experience: string;
+  trainingDaysPerWeek: number;
   equipment: string;
 }
 
 export interface GenerateDietPlanPayload {
   goal: string;
-  calories: number;
-  preference: 'veg' | 'non-veg';
+  currentWeightKg: number;
+  targetWeightKg: number;
+  timelineWeeks: number;
+  preference: 'veg' | 'non-veg' | 'eggetarian';
+  cuisineRegion: 'north-indian' | 'south-indian' | 'east-indian' | 'west-indian' | 'mixed-indian';
   budget: 'low' | 'medium' | 'high';
 }

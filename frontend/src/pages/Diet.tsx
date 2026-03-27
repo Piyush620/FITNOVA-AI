@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Input, Pagination, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, Pagination, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, dietAPI, getApiErrorMessage } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal } from '../types';
+import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -30,6 +31,62 @@ const formatMealType = (type: Meal['type']) =>
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+
+const formatPreferenceLabel = (preference: DietPlan['preference']) => {
+  switch (preference) {
+    case 'non-veg':
+      return 'Non-Veg';
+    case 'eggetarian':
+      return 'Eggetarian';
+    default:
+      return 'Veg';
+  }
+};
+
+const calculateMealNutrition = (meal: Meal) => ({
+  calories: meal.calories ?? 0,
+  proteinGrams: meal.proteinGrams ?? 0,
+  carbsGrams: meal.carbsGrams ?? 0,
+  fatsGrams: meal.fatsGrams ?? 0,
+});
+
+const calculateDayNutrition = (day: DietDay) =>
+  day.meals.reduce(
+    (totals, meal) => {
+      const mealNutrition = calculateMealNutrition(meal);
+      return {
+        calories: totals.calories + mealNutrition.calories,
+        proteinGrams: totals.proteinGrams + mealNutrition.proteinGrams,
+        carbsGrams: totals.carbsGrams + mealNutrition.carbsGrams,
+        fatsGrams: totals.fatsGrams + mealNutrition.fatsGrams,
+      };
+    },
+    {
+      calories: 0,
+      proteinGrams: 0,
+      carbsGrams: 0,
+      fatsGrams: 0,
+    }
+  );
+
+const calculatePlanNutrition = (plan: DietPlan) =>
+  plan.days.reduce(
+    (totals, day) => {
+      const dayNutrition = calculateDayNutrition(day);
+      return {
+        calories: totals.calories + dayNutrition.calories,
+        proteinGrams: totals.proteinGrams + dayNutrition.proteinGrams,
+        carbsGrams: totals.carbsGrams + dayNutrition.carbsGrams,
+        fatsGrams: totals.fatsGrams + dayNutrition.fatsGrams,
+      };
+    },
+    {
+      calories: 0,
+      proteinGrams: 0,
+      carbsGrams: 0,
+      fatsGrams: 0,
+    }
+  );
 
 const getCompletionLabel = (plan: DietPlan) => {
   const completedMeals =
@@ -56,8 +113,11 @@ const getStatusClasses = (status: DietPlan['status']) => {
 
 const defaultGeneratorState: GenerateDietPlanPayload = {
   goal: '',
-  calories: 2200,
+  currentWeightKg: 70,
+  targetWeightKg: 65,
+  timelineWeeks: 12,
   preference: 'veg',
+  cuisineRegion: 'mixed-indian',
   budget: 'medium',
 };
 
@@ -76,7 +136,7 @@ export const DietPage: React.FC = () => {
   const [generatorState, setGeneratorState] = useState<GenerateDietPlanPayload>(defaultGeneratorState);
   const [generatorError, setGeneratorError] = useState('');
   const [actionState, setActionState] = useState<
-    { type: 'activate' | 'complete' | 'generate'; key: string } | null
+    { type: 'activate' | 'complete' | 'generate' | 'restart' | 'delete'; key: string } | null
   >(null);
   const [error, setError] = useState('');
 
@@ -84,6 +144,7 @@ export const DietPage: React.FC = () => {
     setGeneratorState((current) => ({
       ...current,
       goal: user?.profile?.goal ?? '',
+      currentWeightKg: user?.profile?.weightKg ?? current.currentWeightKg,
     }));
   }, [user]);
 
@@ -142,6 +203,21 @@ export const DietPage: React.FC = () => {
     activePlan ??
     plans[0] ??
     null;
+  const selectedPlanNutrition = selectedPlan ? calculatePlanNutrition(selectedPlan) : null;
+  const selectedPlanCompletedMeals =
+    selectedPlan?.progress?.completedMeals ??
+    selectedPlan?.days.reduce((sum, day) => sum + day.meals.filter((meal) => !!meal.completedAt).length, 0) ??
+    0;
+  const selectedPlanTotalMeals =
+    selectedPlan?.progress?.totalMeals ??
+    selectedPlan?.days.reduce((sum, day) => sum + day.meals.length, 0) ??
+    0;
+  const selectedPlanCompletionRate =
+    selectedPlanTotalMeals > 0 ? Math.round((selectedPlanCompletedMeals / selectedPlanTotalMeals) * 100) : 0;
+  const averageCaloriesPerDay =
+    selectedPlan && selectedPlan.days.length > 0 && selectedPlanNutrition
+      ? Math.round(selectedPlanNutrition.calories / selectedPlan.days.length)
+      : null;
 
   const handleActivatePlan = async (planId: string) => {
     setActionState({ type: 'activate', key: planId });
@@ -154,7 +230,7 @@ export const DietPage: React.FC = () => {
       setSelectedPlanId(nextActivePlan.id);
       navigate(`/diet/${nextActivePlan.id}`);
       await loadPlans(false, 1);
-      toastSuccess('Diet plan activated! 🥗');
+      toastSuccess('Diet plan activated!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -182,7 +258,7 @@ export const DietPage: React.FC = () => {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
       }
       await loadPlans();
-      toastSuccess('Meal logged! Nutritional goals on track! 🎯');
+      toastSuccess('Meal logged! Nutritional goals on track!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -195,10 +271,85 @@ export const DietPage: React.FC = () => {
     }
   };
 
+  const handleRestartPlan = async (planId: string) => {
+    setActionState({ type: 'restart', key: planId });
+    setError('');
+
+    try {
+      const response = await dietAPI.restartPlan(planId);
+      const restartedPlan = response.data;
+      setActivePlan(restartedPlan);
+      setSelectedPlanId(restartedPlan.id);
+      navigate(`/diet/${restartedPlan.id}`);
+      await loadPlans(false, 1);
+      toastSuccess('Diet week restarted. Fresh meal tracking is ready!');
+    } catch (error) {
+      const message = axios.isAxiosError<ApiErrorResponse>(error)
+        ? getApiErrorMessage(error.response?.data?.message)
+        : undefined;
+      const errorMsg = message || 'Failed to restart diet plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    const confirmed = window.confirm('Delete this diet plan permanently? This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setActionState({ type: 'delete', key: planId });
+    setError('');
+
+    try {
+      await dietAPI.deletePlan(planId);
+      const remainingPlans = plans.filter((plan) => plan.id !== planId);
+      const nextSelectedPlanId =
+        selectedPlanId === planId ? (remainingPlans[0]?.id ?? null) : selectedPlanId;
+
+      setPlans(remainingPlans);
+      setSelectedPlanId(nextSelectedPlanId);
+      if (activePlan?.id === planId) {
+        setActivePlan(remainingPlans.find((plan) => plan.status === 'active') ?? null);
+      }
+      if (id === planId) {
+        navigate('/diet');
+      }
+      await loadPlans(false, 1);
+      toastSuccess('Diet plan deleted.');
+    } catch (error) {
+      const message = axios.isAxiosError<ApiErrorResponse>(error)
+        ? getApiErrorMessage(error.response?.data?.message)
+        : undefined;
+      const errorMsg = message || 'Failed to delete diet plan.';
+      setError(errorMsg);
+      toastError(errorMsg);
+    } finally {
+      setActionState(null);
+    }
+  };
+
   const handleGeneratePlan = async () => {
-    if (!generatorState.goal || !generatorState.calories || !generatorState.preference || !generatorState.budget) {
-      setGeneratorError('Fill in goal, calories, preference, and budget before generating a plan.');
+    if (
+      !generatorState.goal ||
+      !generatorState.currentWeightKg ||
+      !generatorState.targetWeightKg ||
+      !generatorState.timelineWeeks ||
+      !generatorState.preference ||
+      !generatorState.cuisineRegion ||
+      !generatorState.budget
+    ) {
+      setGeneratorError('Fill in goal, current weight, target weight, timeline, cuisine, preference, and budget before generating a plan.');
       toastError('Please fill in all required fields');
+      return;
+    }
+
+    if (generatorState.currentWeightKg === generatorState.targetWeightKg) {
+      setGeneratorError('Set a target weight that is different from your current weight.');
+      toastError('Choose a different target weight');
       return;
     }
 
@@ -220,7 +371,7 @@ export const DietPage: React.FC = () => {
       setSelectedPlanId(generatedPlan.id);
       navigate(`/diet/${generatedPlan.id}`);
       await loadPlans();
-      toastSuccess('AI diet plan generated and saved! 🤖🥗');
+      toastSuccess('AI diet plan generated and saved!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -239,6 +390,7 @@ export const DietPage: React.FC = () => {
     const isCompleted = !!meal.completedAt;
     const isCompleting =
       actionState?.type === 'complete' && actionState.key === `${planId}:${dayNumber}:${meal.type}`;
+    const mealNutrition = calculateMealNutrition(meal);
 
     return (
       <div key={`${dayNumber}-${meal.type}`} className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4">
@@ -260,6 +412,8 @@ export const DietPage: React.FC = () => {
           {!isCompleted && selectedPlan?.status === 'active' ? (
             <Button
               size="sm"
+              variant="accent"
+              className="min-w-[148px]"
               onClick={() => void handleCompleteMeal(planId, dayNumber, meal.type)}
               isLoading={isCompleting}
             >
@@ -268,12 +422,29 @@ export const DietPage: React.FC = () => {
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-400">
-          {meal.calories ? <span>{meal.calories} kcal</span> : null}
-          {meal.proteinGrams ? <span>{meal.proteinGrams}g protein</span> : null}
-          {meal.carbsGrams ? <span>{meal.carbsGrams}g carbs</span> : null}
-          {meal.fatsGrams ? <span>{meal.fatsGrams}g fats</span> : null}
-        </div>
+        {(mealNutrition.calories > 0 ||
+          mealNutrition.proteinGrams > 0 ||
+          mealNutrition.carbsGrams > 0 ||
+          mealNutrition.fatsGrams > 0) ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calories</p>
+              <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.calories} kcal</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein</p>
+              <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.proteinGrams}g</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs</p>
+              <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.carbsGrams}g</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats</p>
+              <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.fatsGrams}g</p>
+            </div>
+          </div>
+        ) : null}
 
         {meal.items?.length ? (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -291,51 +462,179 @@ export const DietPage: React.FC = () => {
     );
   };
 
-  const renderDayCard = (planId: string, day: DietDay) => (
-    <Card key={day.dayNumber} className="space-y-4">
-      <div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[#00FF88]">
-            Day {day.dayNumber}
-          </span>
-          {day.targetCalories ? (
-            <span className="rounded-full border border-[#2e303a] px-3 py-1 text-xs text-gray-300">
-              {day.targetCalories} kcal target
-            </span>
-          ) : null}
-        </div>
-        <h3 className="mt-2 text-xl font-bold text-[#F7F7F7]">{day.dayLabel}</h3>
-        {day.theme ? <p className="mt-1 text-gray-400">{day.theme}</p> : null}
-      </div>
+  const renderDayCard = (planId: string, day: DietDay) => {
+    const dayNutrition = calculateDayNutrition(day);
+    const completedMeals = day.meals.filter((meal) => !!meal.completedAt).length;
+    const totalMeals = day.meals.length;
+    const completionRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 100) : 0;
+    const calorieTarget = day.targetCalories ?? selectedPlan?.targetCalories ?? null;
+    const calorieDifference = calorieTarget !== null ? dayNutrition.calories - calorieTarget : null;
 
-      <div className="space-y-3">
-        {day.meals.map((meal) => renderMealCard(planId, day.dayNumber, meal))}
-      </div>
-    </Card>
-  );
+    return (
+      <Card key={day.dayNumber} className="space-y-4">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold uppercase tracking-[0.2em] text-[#00FF88]">
+                  Day {day.dayNumber}
+                </span>
+                {calorieTarget ? (
+                  <span className="rounded-full border border-[#2e303a] px-3 py-1 text-xs text-gray-300">
+                    {calorieTarget} kcal target
+                  </span>
+                ) : null}
+              </div>
+              <h3 className="mt-2 text-xl font-bold text-[#F7F7F7]">{day.dayLabel}</h3>
+              {day.theme ? <p className="mt-1 text-gray-400">{day.theme}</p> : null}
+            </div>
+
+            <div className="min-w-[240px] rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <div className="flex items-center justify-between text-sm text-gray-400">
+                <span>Daily progress</span>
+                <span className="font-semibold text-[#F7F7F7]">{completedMeals}/{totalMeals} meals</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b1e2a]">
+                <div
+                  className="h-full rounded-full bg-[#00FF88] transition-all"
+                  style={{ width: `${completionRate}%` }}
+                />
+              </div>
+              <p className="mt-3 text-sm text-gray-400">
+                {completionRate === 100
+                  ? 'Great work. This day is fully completed.'
+                  : `${Math.max(totalMeals - completedMeals, 0)} meal${totalMeals - completedMeals === 1 ? '' : 's'} left to complete.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calories</p>
+              <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.calories} kcal</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein</p>
+              <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.proteinGrams}g</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs</p>
+              <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.carbsGrams}g</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats</p>
+              <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.fatsGrams}g</p>
+            </div>
+            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calorie gap</p>
+              <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                {calorieDifference === null ? 'N/A' : `${calorieDifference > 0 ? '+' : ''}${calorieDifference} kcal`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {day.meals.map((meal) => renderMealCard(planId, day.dayNumber, meal))}
+        </div>
+      </Card>
+    );
+  };
 
   const isGenerating = actionState?.type === 'generate';
 
   return (
     <MainLayout>
       <div className="space-y-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-[#F7F7F7]">Diet Plans</h1>
-            <p className="mt-2 text-gray-400">Track your nutrition plan, activate a schedule, and complete meals day by day.</p>
+        <Card variant="gradient" className="overflow-hidden p-0">
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Breadcrumbs
+                  items={[
+                    { label: 'Dashboard', onClick: () => navigate('/dashboard') },
+                    { label: 'Diet', isCurrent: true },
+                  ]}
+                />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Nutrition Engine</p>
+                <h1 className="text-3xl font-black leading-[1] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
+                  Turn your
+                  <span className="block bg-[linear-gradient(90deg,#00FF88_0%,#F4FFF9_55%,#FF6B00_100%)] bg-clip-text text-transparent">
+                    meals into momentum.
+                  </span>
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 text-gray-400 sm:text-base">
+                  Build cuisine-aware diet plans, track every meal, and keep your calorie and macro rhythm visible through the week.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
+                  Refresh
+                </Button>
+                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                  Generate New Plan
+                </Button>
+                <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
+                  {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Plans loaded</p>
+                  <p className="text-3xl font-bold text-[#F7F7F7]">{plans.length}</p>
+                </Card>
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Active cycle</p>
+                  <p className="text-3xl font-bold text-[#00FF88]">{activePlan ? 'Live' : 'Idle'}</p>
+                </Card>
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Completion</p>
+                  <p className="text-3xl font-bold text-[#F7F7F7]">{selectedPlanCompletionRate}%</p>
+                </Card>
+              </div>
+            </div>
+
+            <Card className="overflow-hidden p-0">
+              <div className="relative min-h-full">
+                <img src={heroImage} alt="Diet visual" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.58)_48%,rgba(5,5,5,0.94)_100%)]" />
+                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                  <div className="inline-flex self-start rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
+                    Nutrition Mode
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-2xl font-bold leading-tight text-[#F7F7F7]">
+                        {selectedPlan?.title || 'Cuisine-aware diet system'}
+                      </h2>
+                      <p className="mt-2 max-w-sm text-sm leading-6 text-[#d7dce6]">
+                        Keep the structure practical, the cuisine familiar, and the calorie target realistic enough to follow.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Calories</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                          {selectedPlan?.targetCalories ? `${selectedPlan.targetCalories}` : 'AI'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Preference</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                          {selectedPlan ? formatPreferenceLabel(selectedPlan.preference) : 'Mixed'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Status</p>
+                        <p className="mt-2 text-xl font-bold text-[#F7F7F7] capitalize">{selectedPlan?.status || 'draft'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
-              Refresh
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-              Generate New Plan
-            </Button>
-            <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
-              {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
-            </Button>
-          </div>
-        </div>
+        </Card>
 
         {showGenerator ? (
           <Card variant="gradient" className="space-y-5">
@@ -343,7 +642,7 @@ export const DietPage: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-bold text-[#F7F7F7]">AI Diet Generator</h2>
                 <p className="mt-1 text-gray-400">
-                  Generate a structured diet plan and save it directly into your nutrition plans.
+                  Tell FitNova your current weight, goal weight, timeline, cuisine, and food preference. The AI will estimate calories and build the week for you.
                 </p>
               </div>
               <span className="text-sm text-gray-500">Uses your backend AI provider</span>
@@ -363,20 +662,46 @@ export const DietPage: React.FC = () => {
                 onChange={(e) => setGeneratorState((current) => ({ ...current, goal: e.target.value }))}
               />
               <Input
-                label="Target Calories"
+                label="Current Weight (kg)"
                 type="number"
-                min={1000}
-                max={6000}
-                value={generatorState.calories}
+                min={30}
+                max={300}
+                value={generatorState.currentWeightKg}
                 onChange={(e) =>
                   setGeneratorState((current) => ({
                     ...current,
-                    calories: Number(e.target.value) || 0,
+                    currentWeightKg: Number(e.target.value) || 0,
+                  }))
+                }
+              />
+              <Input
+                label="Target Weight (kg)"
+                type="number"
+                min={30}
+                max={300}
+                value={generatorState.targetWeightKg}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    targetWeightKg: Number(e.target.value) || 0,
+                  }))
+                }
+              />
+              <Input
+                label="Time To Reach Goal (weeks)"
+                type="number"
+                min={1}
+                max={52}
+                value={generatorState.timelineWeeks}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    timelineWeeks: Number(e.target.value) || 0,
                   }))
                 }
               />
               <Select
-                label="Preference"
+                label="Food Preference"
                 value={generatorState.preference}
                 onChange={(e) =>
                   setGeneratorState((current) => ({
@@ -387,6 +712,24 @@ export const DietPage: React.FC = () => {
                 options={[
                   { value: 'veg', label: 'Veg' },
                   { value: 'non-veg', label: 'Non-veg' },
+                  { value: 'eggetarian', label: 'Eggetarian' },
+                ]}
+              />
+              <Select
+                label="Cuisine Style"
+                value={generatorState.cuisineRegion}
+                onChange={(e) =>
+                  setGeneratorState((current) => ({
+                    ...current,
+                    cuisineRegion: e.target.value as GenerateDietPlanPayload['cuisineRegion'],
+                  }))
+                }
+                options={[
+                  { value: 'north-indian', label: 'North Indian' },
+                  { value: 'south-indian', label: 'South Indian' },
+                  { value: 'east-indian', label: 'East Indian' },
+                  { value: 'west-indian', label: 'West Indian' },
+                  { value: 'mixed-indian', label: 'Mixed Indian' },
                 ]}
               />
               <Select
@@ -415,8 +758,11 @@ export const DietPage: React.FC = () => {
                 onClick={() => {
                   setGeneratorState({
                     goal: user?.profile?.goal ?? '',
-                    calories: 2200,
+                    currentWeightKg: user?.profile?.weightKg ?? 70,
+                    targetWeightKg: Math.max((user?.profile?.weightKg ?? 70) - 5, 30),
+                    timelineWeeks: 12,
                     preference: 'veg',
+                    cuisineRegion: 'mixed-indian',
                     budget: 'medium',
                   });
                   setGeneratorError('');
@@ -437,10 +783,15 @@ export const DietPage: React.FC = () => {
 
         {isLoading ? (
           <Card variant="gradient">
-            <div className="py-12 text-center">
-              <p className="mb-6 text-lg text-gray-400">Loading your diet plans...</p>
-              <div className="inline-flex animate-spin">
-                <div className="h-8 w-8 rounded-full border-4 border-[#00FF88] border-t-transparent"></div>
+            <div className="space-y-5">
+              <div className="h-8 w-52 animate-pulse rounded-2xl bg-[#1a2030]" />
+              <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-44 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+                  ))}
+                </div>
+                <div className="h-[620px] animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
               </div>
             </div>
           </Card>
@@ -449,8 +800,13 @@ export const DietPage: React.FC = () => {
             <div className="space-y-4 py-12 text-center">
               <h2 className="text-2xl font-bold text-[#F7F7F7]">No diet plans yet</h2>
               <p className="mx-auto max-w-2xl text-gray-400">
-                Generate one with AI above, or add a manual creation flow next.
+                Build a plan from your current weight, target weight, timeline, and cuisine preference so the meals feel realistic for your lifestyle.
               </p>
+              <div className="flex justify-center">
+                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                  Open AI Generator
+                </Button>
+              </div>
             </div>
           </Card>
         ) : (
@@ -459,6 +815,8 @@ export const DietPage: React.FC = () => {
               {plans.map((plan) => {
                 const isSelected = selectedPlan?.id === plan.id;
                 const isActivating = actionState?.type === 'activate' && actionState.key === plan.id;
+                const isRestarting = actionState?.type === 'restart' && actionState.key === plan.id;
+                const isDeleting = actionState?.type === 'delete' && actionState.key === plan.id;
 
                 return (
                   <Card key={plan.id} variant={isSelected ? 'gradient' : 'default'} className="space-y-4">
@@ -473,9 +831,9 @@ export const DietPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-2 text-sm text-gray-400">
-                      <p>Preference: <span className="text-[#F7F7F7]">{plan.preference}</span></p>
+                      <p>Preference: <span className="text-[#F7F7F7]">{formatPreferenceLabel(plan.preference)}</span></p>
                       <p>{getCompletionLabel(plan)}</p>
-                      <p>Calories: <span className="text-[#F7F7F7]">{plan.targetCalories ?? 'Not set'}</span></p>
+                      <p>Calories: <span className="text-[#F7F7F7]">{plan.targetCalories ? `${plan.targetCalories} kcal` : 'AI derived'}</span></p>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
@@ -489,11 +847,29 @@ export const DietPage: React.FC = () => {
                       >
                         View Details
                       </Button>
-                      {plan.status !== 'active' ? (
+                      {plan.status === 'completed' ? (
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          onClick={() => void handleRestartPlan(plan.id)}
+                          isLoading={isRestarting}
+                        >
+                          Restart Week
+                        </Button>
+                      ) : plan.status !== 'active' ? (
                         <Button size="sm" onClick={() => void handleActivatePlan(plan.id)} isLoading={isActivating}>
                           Activate
                         </Button>
                       ) : null}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                        onClick={() => void handleDeletePlan(plan.id)}
+                        isLoading={isDeleting}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </Card>
                 );
@@ -508,7 +884,10 @@ export const DietPage: React.FC = () => {
 
             {selectedPlan ? (
               <div className="space-y-6">
-                <Card variant="gradient" className="space-y-5">
+                <Card variant="gradient" className="overflow-hidden p-0">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.12),transparent_22%)]" />
+                    <div className="relative space-y-5 p-6">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <div className="mb-3 flex items-center gap-3">
@@ -526,10 +905,66 @@ export const DietPage: React.FC = () => {
                       <p className="mt-4 text-sm text-gray-400">{getCompletionLabel(selectedPlan)}</p>
                     </div>
                     <div className="grid gap-2 text-sm text-gray-400">
-                      <p>Preference: <span className="text-[#F7F7F7]">{selectedPlan.preference}</span></p>
-                      <p>Target Calories: <span className="text-[#F7F7F7]">{selectedPlan.targetCalories ?? 'Not set'}</span></p>
+                      <p>Preference: <span className="text-[#F7F7F7]">{formatPreferenceLabel(selectedPlan.preference)}</span></p>
+                      <p>Target Calories: <span className="text-[#F7F7F7]">{selectedPlan.targetCalories ? `${selectedPlan.targetCalories} kcal` : 'AI derived'}</span></p>
                       <p>Start: <span className="text-[#F7F7F7]">{formatDate(selectedPlan.startDate)}</span></p>
                       <p>End: <span className="text-[#F7F7F7]">{formatDate(selectedPlan.endDate)}</span></p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Plan completion</p>
+                      <p className="mt-2 text-2xl font-bold text-[#00FF88]">{selectedPlanCompletionRate}%</p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Average calories/day</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
+                        {averageCaloriesPerDay ? `${averageCaloriesPerDay}` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein/day</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
+                        {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.proteinGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs/day</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
+                        {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.carbsGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats/day</p>
+                      <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
+                        {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.fatsGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Calorie tracker</p>
+                        <p className="mt-2 text-sm text-gray-400">
+                          Use this as your weekly nutrition guide. Staying close to the target matters more than being perfect on every single meal.
+                        </p>
+                      </div>
+                      <div className="min-w-[220px]">
+                        <div className="flex items-center justify-between text-sm text-gray-400">
+                          <span>Meals completed</span>
+                          <span className="font-semibold text-[#F7F7F7]">
+                            {selectedPlanCompletedMeals}/{selectedPlanTotalMeals}
+                          </span>
+                        </div>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b1e2a]">
+                          <div
+                            className="h-full rounded-full bg-[#00FF88] transition-all"
+                            style={{ width: `${selectedPlanCompletionRate}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -538,6 +973,38 @@ export const DietPage: React.FC = () => {
                       {selectedPlan.notes}
                     </div>
                   ) : null}
+
+                  {selectedPlan.status === 'completed' ? (
+                    <div className="flex flex-col gap-4 rounded-2xl border border-[#00FF88]/40 bg-[#00FF88]/10 p-5 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-lg font-semibold text-[#F7F7F7]">Week completed</p>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Restart the same meal structure with all completion marks cleared for a fresh week.
+                        </p>
+                      </div>
+                      <Button
+                        variant="accent"
+                        className="min-w-[168px]"
+                        onClick={() => void handleRestartPlan(selectedPlan.id)}
+                        isLoading={actionState?.type === 'restart' && actionState.key === selectedPlan.id}
+                      >
+                        Restart Week
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end">
+                    <Button
+                      variant="secondary"
+                      className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                      onClick={() => void handleDeletePlan(selectedPlan.id)}
+                      isLoading={actionState?.type === 'delete' && actionState.key === selectedPlan.id}
+                    >
+                      Delete Plan
+                    </Button>
+                  </div>
+                    </div>
+                  </div>
                 </Card>
 
                 <div className="space-y-4">
@@ -551,3 +1018,5 @@ export const DietPage: React.FC = () => {
     </MainLayout>
   );
 };
+
+

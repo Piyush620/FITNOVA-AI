@@ -18,6 +18,8 @@ describe('ProtectedRoute', () => {
   it('should render children when user is authenticated', () => {
     const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
+      hasHydrated: true,
+      hasSession: true,
       isAuthenticated: true,
       isLoading: false,
       getCurrentUser: vi.fn(),
@@ -37,6 +39,8 @@ describe('ProtectedRoute', () => {
   it('should show loading state while checking authentication', () => {
     const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
+      hasHydrated: true,
+      hasSession: false,
       isAuthenticated: false,
       isLoading: true,
       getCurrentUser: vi.fn(),
@@ -57,6 +61,8 @@ describe('ProtectedRoute', () => {
   it('should redirect to login when user is not authenticated', () => {
     const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
+      hasHydrated: true,
+      hasSession: false,
       isAuthenticated: false,
       isLoading: false,
       getCurrentUser: vi.fn(),
@@ -78,6 +84,8 @@ describe('ProtectedRoute', () => {
     const mockGetCurrentUser = vi.fn();
     const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
+      hasHydrated: true,
+      hasSession: true,
       isAuthenticated: false,
       isLoading: false,
       getCurrentUser: mockGetCurrentUser,

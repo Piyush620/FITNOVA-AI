@@ -251,8 +251,11 @@ VITE_API_URL=http://localhost:4000/api/v1
 - JWT token refresh interceptors
 - Persistent auth state with localStorage
 - Dashboard with aggregated user data
+- Dedicated profile page with avatar editing and progress snapshot
 - Workout plan management with pagination
 - Diet plan management with pagination
+- Workout AI generator with training-days-per-week input
+- Diet AI generator with beginner-friendly weight/timeline/cuisine inputs
 - AI-powered coaching chat
 - Responsive dark-mode Tailwind design
 - ESLint + TypeScript build pipeline
@@ -261,20 +264,21 @@ VITE_API_URL=http://localhost:4000/api/v1
 ## Known Limitations & Roadmap
 
 **Current Status:**
-- ⚠️ Runtime QA in progress (see TODO.md)
+- ✅ Main web flows have been manually runtime QA tested
+- ✅ Signup now captures age and gender and uses them in AI generation context
+- ✅ Profile editing, avatar display, plan restart, and plan delete flows are live
 - ⚠️ Billing enabled but not connected to Stripe
 - ⚠️ Background jobs scaffolded but not activated
 - ⚠️ Mobile app not started (coming post-launch)
 
 **Priority Next Steps:**
-1. Complete end-to-end runtime testing across all flows
-2. Add structured logging and error tracking
-3. Implement toast notifications for user feedback
-4. Complete styling polish on detail pages
-5. Add rate limiting and security hardening
-6. Activate background job workers
-7. Wire Stripe checkout and PostgreSQL billing
-8. Add comprehensive test coverage
+1. Complete remaining diet-detail and dashboard visual polish
+2. Add broader frontend integration coverage
+3. Add structured logging and error tracking
+4. Add rate limiting and security hardening
+5. Activate background job workers
+6. Wire Stripe checkout and PostgreSQL billing
+7. Add comprehensive backend integration coverage
 
 Full roadmap in [TODO.md](./TODO.md)
 
@@ -298,7 +302,10 @@ npm run test:cov     # Coverage report
 ```
 
 **Frontend Tests:**
-Unit and integration tests to be added.
+- `ProtectedRoute` route-guard behavior
+- Header profile navigation smoke test
+- Profile page data render smoke test
+- More auth/plan integration coverage still to be added
 
 ### Code Quality
 

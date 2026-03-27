@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
 import { Button, Input, Card } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage } from '../services/api';
+import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -12,10 +13,16 @@ type ApiErrorResponse = {
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated, hasHydrated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [hasHydrated, isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,24 +53,34 @@ export const LoginPage: React.FC = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#00FF88]">
               Welcome Back
             </p>
-            <h1 className="text-4xl font-bold text-[#F7F7F7] sm:text-5xl">
-              Get back into your training flow.
+            <h1 className="text-4xl font-black leading-[0.95] text-[#F7F7F7] sm:text-6xl">
+              Re-enter your
+              <span className="block bg-[linear-gradient(90deg,#00FF88_0%,#F4FFF9_55%,#FF6B00_100%)] bg-clip-text text-transparent">
+                performance zone.
+              </span>
             </h1>
             <p className="max-w-xl text-base text-gray-400 sm:text-lg">
-              Review your plans, track completed sessions, and keep the momentum going with AI coaching that stays close to your goals.
+              Review your plans, track completed sessions, and keep the momentum sharp with a cleaner, more intense command-center feel.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="space-y-2">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Workout consistency</p>
-              <p className="text-sm text-gray-400">Pick up right where you left off and mark progress in real time.</p>
-            </Card>
-            <Card className="space-y-2">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Coach guidance</p>
-              <p className="text-sm text-gray-400">Use the AI coach for quick adjustments, motivation, and recovery help.</p>
-            </Card>
-          </div>
+          <Card variant="glass" className="overflow-hidden border-white/10 p-0">
+            <div className="relative aspect-[16/10]">
+              <img src={heroImage} alt="Training visual" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,8,8,0.88)_0%,rgba(8,8,8,0.28)_100%)]" />
+              <div className="absolute inset-0 flex flex-col justify-end p-6">
+                <div className="max-w-md space-y-3">
+                  <div className="inline-flex rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88] backdrop-blur">
+                    Locked in
+                  </div>
+                  <h2 className="text-2xl font-semibold text-white">Your next session is one login away.</h2>
+                  <p className="text-sm leading-7 text-[#d5d9e3]">
+                    Jump back into plans, streaks, coach support, and the weekly system you already started building.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </section>
 
         <section className="flex justify-center lg:justify-end">

@@ -8,6 +8,7 @@ interface SelectOption {
 interface SelectProps {
   label?: string;
   placeholder?: string;
+  name?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: SelectOption[];
@@ -20,6 +21,7 @@ interface SelectProps {
 export const Select: React.FC<SelectProps> = ({
   label,
   placeholder,
+  name,
   value,
   onChange,
   options,
@@ -36,6 +38,7 @@ export const Select: React.FC<SelectProps> = ({
         </label>
       )}
       <select
+        name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
