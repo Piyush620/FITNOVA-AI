@@ -5,7 +5,7 @@ import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Button, Card } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage, usersAPI } from '../services/api';
-import { estimateGoalCalories, resolveGoalCalorieTarget } from '../utils/calorieTarget';
+import { estimateGoalCalories } from '../utils/calorieTarget';
 import type { DashboardSummary } from '../types';
 import heroImage from '../assets/hero.png';
 
@@ -19,6 +19,7 @@ export const DashboardPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [heroImageSrc, setHeroImageSrc] = useState(heroImage);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,6 +43,11 @@ export const DashboardPage: React.FC = () => {
 
     void fetchDashboard();
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    const avatarUrl = user?.profile?.avatarUrl?.trim();
+    setHeroImageSrc(avatarUrl ? avatarUrl : heroImage);
+  }, [user?.profile?.avatarUrl]);
 
   if (!isAuthenticated) {
     return null;
@@ -80,12 +86,10 @@ export const DashboardPage: React.FC = () => {
   const mealCompletionRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 100) : 0;
   const weightChange = dashboard?.progressSummary.weightChangeKg ?? null;
   const firstName = user?.profile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Athlete';
-  const normalizedGoal = user?.profile?.goal?.toLowerCase() ?? dashboard?.goal?.toLowerCase() ?? '';
-  const shouldForceGoalEstimate =
-    normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut');
-  const effectiveCalorieTarget = shouldForceGoalEstimate
-    ? estimateGoalCalories(user?.profile)
-    : resolveGoalCalorieTarget(user?.profile, dashboard?.caloriesTarget);
+  const effectiveCalorieTarget =
+    dashboard?.caloriesTarget && dashboard.caloriesTarget > 0
+      ? dashboard.caloriesTarget
+      : estimateGoalCalories(user?.profile);
   const remainingCalories = dashboard ? effectiveCalorieTarget - dashboard.todaysCalories : 0;
 
   return (
@@ -138,15 +142,16 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0">
-              <div className="relative min-h-full">
+            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
+              <div className="relative min-h-[520px] lg:min-h-[620px]">
                 <img
-                  src={user?.profile?.avatarUrl || heroImage}
+                  src={heroImageSrc}
                   alt="Dashboard energy"
                   className="h-full w-full object-cover"
+                  onError={() => setHeroImageSrc(heroImage)}
                 />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,6,6,0.18)_0%,rgba(6,6,6,0.52)_44%,rgba(6,6,6,0.94)_100%)]" />
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                <div className="absolute inset-0 flex flex-col gap-5 p-6">
                   <div>
                     <div className="inline-flex rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
                       This week
@@ -157,7 +162,7 @@ export const DashboardPage: React.FC = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="mt-auto space-y-4 pt-2">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
                         <p className="text-sm text-[#cbd1de]">Workouts completed</p>
@@ -198,13 +203,13 @@ export const DashboardPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <Button fullWidth variant="secondary" onClick={() => navigate('/workouts')}>
+                      <Button fullWidth size="sm" variant="secondary" onClick={() => navigate('/workouts')}>
                         View Workouts
                       </Button>
-                      <Button fullWidth variant="secondary" onClick={() => navigate('/diet')}>
+                      <Button fullWidth size="sm" variant="secondary" onClick={() => navigate('/diet')}>
                         View Diet Plans
                       </Button>
-                      <Button fullWidth variant="secondary" onClick={() => navigate('/calories')}>
+                      <Button fullWidth size="sm" variant="secondary" onClick={() => navigate('/calories')}>
                         Log Calories
                       </Button>
                     </div>

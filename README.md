@@ -27,7 +27,17 @@ FitNova AI is a fitness product that combines training plans, diet plans, progre
 This repository currently contains:
 - a working NestJS + Fastify backend
 - a working React web frontend
-- scaffolded billing and queue modules that are not live yet
+- working Stripe billing wiring backed by MongoDB persistence
+- scaffolded queue modules that are not live yet
+
+## Cross-Feature Sync
+
+FitNova now links training, nutrition, and calorie tracking more tightly:
+- active workout splits are passed into AI diet generation as structured context
+- generated diet days can shift calories based on training-day versus recovery-day demand
+- training days can include recovery-focused post-workout meals automatically
+- the calorie tracker now explains whether today's target is coming from the active diet day, the active diet plan, or a workout-adjusted estimate
+- the workout detail flow now points users directly into building a matching diet plan
 
 ## What Works Today
 
@@ -36,11 +46,12 @@ This repository currently contains:
 - Sign up, sign in, refresh session, and log out
 - View a real dashboard with workout, diet, calorie, and progress summary data
 - Generate, save, activate, view, restart, and progress workout plans
-- Generate, save, activate, view, and progress diet plans
+- Generate, save, activate, view, restart, and progress diet plans
 - Open AI coach chat with saved history hydration
 - Log meals in plain language, let AI estimate calories/macros, confirm, and save
 - Review daily calorie totals and monthly calorie summaries
 - Edit profile data and avatar details
+- Sync diet planning and calorie tracking with the active workout split
 
 ### Backend modules
 
@@ -51,7 +62,7 @@ This repository currently contains:
 - `progress`
 - `calorie-logs`
 - `ai`
-- `subscriptions` scaffold
+- `subscriptions`
 - `queue` scaffold
 - `system`
 
@@ -78,8 +89,6 @@ This repository currently contains:
 
 ### Still scaffold-only
 
-- Stripe billing
-- PostgreSQL subscription persistence
 - Redis/BullMQ workers
 - Mobile app
 
@@ -136,7 +145,6 @@ FitNova AI/
 - Gemini API key or OpenAI API key for AI flows
 
 Optional for scaffold work only:
-- PostgreSQL
 - Redis
 - Stripe keys
 
@@ -212,12 +220,11 @@ REDIS_ENABLED=false
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 
-# Optional billing scaffold
+# Optional billing
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_MONTHLY=price_...
 STRIPE_PRICE_YEARLY=price_...
-POSTGRES_URL=postgresql://user:password@localhost/fitnova
 ```
 
 ### Frontend
@@ -238,8 +245,10 @@ VITE_API_URL=http://localhost:4000/api/v1
 ### Diet flow
 
 1. Open `Diet`
-2. Generate an AI diet plan using goal, food preference, timeline, and related inputs
-3. Save it, activate it, and mark meals complete from the detail screen
+2. If you want nutrition matched to training demand, activate a workout split first
+3. Generate an AI diet plan using goal, food preference, timeline, and related inputs
+4. FitNova uses the active workout split to shape day calories, recovery support, and post-workout meal timing when applicable
+5. Save it, activate it, and mark meals complete from the detail screen
 
 ### AI coach flow
 
@@ -255,6 +264,7 @@ VITE_API_URL=http://localhost:4000/api/v1
 4. Review the estimate
 5. Save the entry
 6. Check daily totals and monthly review cards
+7. If an active diet day or workout day exists, the tracker target adjusts and explains the source directly in the UI
 
 Manual calorie entry still exists as a fallback mode.
 
@@ -282,8 +292,6 @@ Note:
 
 ## Current Gaps
 
-- Stripe checkout is scaffolded, not live
-- PostgreSQL subscription persistence is not implemented
 - Queue workers are scaffolded, not active
 - Backend integration coverage is still incomplete
 - Broader frontend integration coverage is still incomplete

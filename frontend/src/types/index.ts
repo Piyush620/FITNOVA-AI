@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   roles: Array<'user' | 'admin'>;
+  subscription?: SubscriptionSummary;
   profile: {
     fullName?: string;
     avatarUrl?: string;
@@ -16,6 +17,44 @@ export interface User {
   };
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface SubscriptionSummary {
+  tier: 'free' | 'premium';
+  plan: 'free' | 'monthly' | 'yearly';
+  status:
+    | 'inactive'
+    | 'trialing'
+    | 'active'
+    | 'past_due'
+    | 'canceled'
+    | 'unpaid'
+    | 'incomplete'
+    | 'incomplete_expired'
+    | 'paused';
+  hasPremiumAccess: boolean;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface SubscriptionConfigStatus {
+  stripeConfigured: boolean;
+  persistenceConfigured: boolean;
+  persistenceProvider: 'mongodb';
+  monthlyPriceConfigured: boolean;
+  yearlyPriceConfigured: boolean;
+}
+
+export interface CheckoutSessionResponse {
+  sessionId: string;
+  url: string | null;
+  userId: string;
+  requestedPlan: 'monthly' | 'yearly';
+  priceId: string;
+  stripeCustomerId: string;
 }
 
 export interface LoginPayload {
@@ -134,6 +173,18 @@ export interface CalorieLog {
 export interface DailyCalorieLogResponse {
   date: string;
   targetCalories: number;
+  targetSource?: 'active-diet-day' | 'active-diet-plan' | 'workout-adjusted-estimate' | 'goal-estimate';
+  plannedNutritionDay?: {
+    dayLabel: string;
+    theme?: string;
+    targetCalories: number;
+  } | null;
+  activeWorkoutDay?: {
+    dayLabel: string;
+    focus: string;
+    durationMinutes?: number;
+    isTrainingDay: boolean;
+  } | null;
   totals: {
     calories: number;
     proteinGrams: number;

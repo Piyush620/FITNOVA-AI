@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, Pagination, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, Pagination, PremiumFeatureGate, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
-import { aiAPI, dietAPI, getApiErrorMessage } from '../services/api';
+import { aiAPI, dietAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
-import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal } from '../types';
+import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal, WorkoutPlan } from '../types';
+import { estimateGoalCalories } from '../utils/calorieTarget';
 import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
@@ -121,14 +122,22 @@ const defaultGeneratorState: GenerateDietPlanPayload = {
   budget: 'medium',
 };
 
+const notifyDietTrackerSync = () => {
+  const syncToken = `${Date.now()}`;
+  localStorage.setItem('fitnova-diet-sync', syncToken);
+  window.dispatchEvent(new CustomEvent('fitnova:diet-sync', { detail: syncToken }));
+};
+
 export const DietPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const [plans, setPlans] = useState<DietPlan[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activePlan, setActivePlan] = useState<DietPlan | null>(null);
+  const [activeWorkoutPlan, setActiveWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -147,6 +156,24 @@ export const DietPage: React.FC = () => {
       currentWeightKg: user?.profile?.weightKg ?? current.currentWeightKg,
     }));
   }, [user]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setActiveWorkoutPlan(null);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await workoutsAPI.getActivePlan();
+        setActiveWorkoutPlan(response.data);
+      } catch (requestError) {
+        if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
+          setActiveWorkoutPlan(null);
+        }
+      }
+    })();
+  }, [isAuthenticated]);
 
   const loadPlans = useCallback(async (showInitialLoader = false, requestedPage = page) => {
     if (!isAuthenticated) {
@@ -218,6 +245,23 @@ export const DietPage: React.FC = () => {
     selectedPlan && selectedPlan.days.length > 0 && selectedPlanNutrition
       ? Math.round(selectedPlanNutrition.calories / selectedPlan.days.length)
       : null;
+  const estimatedTrackerCalories = estimateGoalCalories(user?.profile);
+  const activePlanTargetCalories =
+    activePlan?.targetCalories ??
+    activePlan?.days.find((day) => typeof day.targetCalories === 'number')?.targetCalories ??
+    null;
+  const currentTrackerCalories =
+    activePlanTargetCalories && activePlanTargetCalories > 0
+      ? activePlanTargetCalories
+      : estimatedTrackerCalories;
+  const selectedPlanTargetCalories =
+    selectedPlan?.targetCalories ??
+    selectedPlan?.days.find((day) => typeof day.targetCalories === 'number')?.targetCalories ??
+    null;
+  const previewTrackerCalories =
+    selectedPlanTargetCalories && selectedPlanTargetCalories > 0
+      ? selectedPlanTargetCalories
+      : estimatedTrackerCalories;
 
   const handleActivatePlan = async (planId: string) => {
     setActionState({ type: 'activate', key: planId });
@@ -228,6 +272,7 @@ export const DietPage: React.FC = () => {
       const nextActivePlan = response.data;
       setActivePlan(nextActivePlan);
       setSelectedPlanId(nextActivePlan.id);
+      notifyDietTrackerSync();
       navigate(`/diet/${nextActivePlan.id}`);
       await loadPlans(false, 1);
       toastSuccess('Diet plan activated!');
@@ -253,6 +298,7 @@ export const DietPage: React.FC = () => {
 
       setPlans((current) => current.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)));
       setSelectedPlanId(updatedPlan.id);
+      notifyDietTrackerSync();
       navigate(`/diet/${updatedPlan.id}`);
       if (activePlan?.id === updatedPlan.id || updatedPlan.status === 'active' || updatedPlan.status === 'completed') {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
@@ -280,6 +326,7 @@ export const DietPage: React.FC = () => {
       const restartedPlan = response.data;
       setActivePlan(restartedPlan);
       setSelectedPlanId(restartedPlan.id);
+      notifyDietTrackerSync();
       navigate(`/diet/${restartedPlan.id}`);
       await loadPlans(false, 1);
       toastSuccess('Diet week restarted. Fresh meal tracking is ready!');
@@ -315,6 +362,7 @@ export const DietPage: React.FC = () => {
       if (activePlan?.id === planId) {
         setActivePlan(remainingPlans.find((plan) => plan.status === 'active') ?? null);
       }
+      notifyDietTrackerSync();
       if (id === planId) {
         navigate('/diet');
       }
@@ -333,6 +381,12 @@ export const DietPage: React.FC = () => {
   };
 
   const handleGeneratePlan = async () => {
+    if (!hasPremiumAccess) {
+      toastError('Premium subscription required to generate AI diet plans.');
+      navigate('/billing');
+      return;
+    }
+
     if (
       !generatorState.goal ||
       !generatorState.currentWeightKg ||
@@ -369,6 +423,7 @@ export const DietPage: React.FC = () => {
       setPlans((current) => [generatedPlan, ...current.filter((plan) => plan.id !== generatedPlan.id)]);
       setActivePlan(generatedPlan);
       setSelectedPlanId(generatedPlan.id);
+      notifyDietTrackerSync();
       navigate(`/diet/${generatedPlan.id}`);
       await loadPlans();
       toastSuccess('AI diet plan generated and saved!');
@@ -547,8 +602,8 @@ export const DietPage: React.FC = () => {
     <MainLayout>
       <div className="space-y-8">
         <Card variant="gradient" className="overflow-hidden p-0">
-          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="space-y-6">
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <div className="space-y-5">
               <div className="space-y-3">
                 <Breadcrumbs
                   items={[
@@ -557,7 +612,7 @@ export const DietPage: React.FC = () => {
                   ]}
                 />
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Nutrition Engine</p>
-                <h1 className="text-3xl font-black leading-[1] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
+                <h1 className="text-3xl font-black leading-[0.98] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
                   Turn your
                   <span className="block bg-[linear-gradient(90deg,#00FF88_0%,#F4FFF9_55%,#FF6B00_100%)] bg-clip-text text-transparent">
                     meals into momentum.
@@ -571,14 +626,22 @@ export const DietPage: React.FC = () => {
                 <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
                   Refresh
                 </Button>
-                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-                  Generate New Plan
-                </Button>
-                <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
-                  {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
-                </Button>
+                {hasPremiumAccess ? (
+                  <>
+                    <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                      Generate New Plan
+                    </Button>
+                    <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
+                      {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="accent" onClick={() => navigate('/billing')}>
+                    Unlock AI Diet Plans
+                  </Button>
+                )}
               </div>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
                 <Card className="space-y-2 p-5">
                   <p className="text-sm text-gray-400">Plans loaded</p>
                   <p className="text-3xl font-bold text-[#F7F7F7]">{plans.length}</p>
@@ -591,18 +654,25 @@ export const DietPage: React.FC = () => {
                   <p className="text-sm text-gray-400">Completion</p>
                   <p className="text-3xl font-bold text-[#F7F7F7]">{selectedPlanCompletionRate}%</p>
                 </Card>
+                <Card className="space-y-2 p-5">
+                  <p className="text-sm text-gray-400">Tracker target</p>
+                  <p className="text-3xl font-bold text-[#00FF88]">{currentTrackerCalories}</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">
+                    {activePlan ? 'Active diet synced' : 'Goal estimate'}
+                  </p>
+                </Card>
               </div>
             </div>
 
-            <Card className="overflow-hidden p-0">
-              <div className="relative min-h-full">
+            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
+              <div className="relative min-h-[520px] lg:min-h-[620px]">
                 <img src={heroImage} alt="Diet visual" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.58)_48%,rgba(5,5,5,0.94)_100%)]" />
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
+                <div className="absolute inset-0 flex flex-col gap-5 p-6">
                   <div className="inline-flex self-start rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
                     Nutrition Mode
                   </div>
-                  <div className="space-y-4">
+                  <div className="mt-auto space-y-4 pt-2">
                     <div>
                       <h2 className="text-2xl font-bold leading-tight text-[#F7F7F7]">
                         {selectedPlan?.title || 'Cuisine-aware diet system'}
@@ -615,7 +685,7 @@ export const DietPage: React.FC = () => {
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
                         <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Calories</p>
                         <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
-                          {selectedPlan?.targetCalories ? `${selectedPlan.targetCalories}` : 'AI'}
+                          {selectedPlanTargetCalories ? `${selectedPlanTargetCalories}` : estimatedTrackerCalories}
                         </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
@@ -629,6 +699,15 @@ export const DietPage: React.FC = () => {
                         <p className="mt-2 text-xl font-bold text-[#F7F7F7] capitalize">{selectedPlan?.status || 'draft'}</p>
                       </div>
                     </div>
+                    <div className="rounded-2xl border border-[#00FF88]/20 bg-[radial-gradient(circle_at_top,rgba(0,255,136,0.12),transparent_70%),rgba(0,0,0,0.3)] p-4 backdrop-blur">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Calorie tracker sync</p>
+                      <p className="mt-2 text-xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
+                      <p className="mt-2 text-sm leading-6 text-[#d7dce6]">
+                        {activePlan
+                          ? `Your calorie tracker currently follows the active diet target. This selected plan would track at ${previewTrackerCalories} kcal when active.`
+                          : `Before you start a diet plan, FitNova estimates your tracker target from your profile and goal. Once you save and activate a plan, the tracker updates to that plan target automatically.`}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -636,7 +715,7 @@ export const DietPage: React.FC = () => {
           </div>
         </Card>
 
-        {showGenerator ? (
+        {showGenerator && hasPremiumAccess ? (
           <Card variant="gradient" className="space-y-5">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
@@ -647,6 +726,50 @@ export const DietPage: React.FC = () => {
               </div>
               <span className="text-sm text-gray-500">Uses your backend AI provider</span>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Current tracker target</p>
+                <p className="mt-2 text-2xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
+                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
+                  {activePlan ? 'This is coming from your active diet plan.' : 'This is your current goal-based estimate.'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Goal-based estimate</p>
+                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{estimatedTrackerCalories} kcal</p>
+                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
+                  FitNova uses your profile goal, activity, and body stats before any diet plan exists.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">After plan is active</p>
+                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">Tracker updates</p>
+                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
+                  As soon as a diet plan is saved and active, the calorie tracker switches to that plan target automatically.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Workout sync</p>
+                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
+                  {activeWorkoutPlan ? `${activeWorkoutPlan.days.length} day split` : 'No active split'}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
+                  {activeWorkoutPlan
+                    ? 'Diet generation follows your active workout split, giving training days more fuel and recovery support.'
+                    : 'Activate a workout split first if you want meal timing and day calories shaped around training demand.'}
+                </p>
+              </div>
+            </div>
+
+            {activeWorkoutPlan ? (
+              <div className="rounded-2xl border border-[#00FF88]/20 bg-[#0f1320] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Active workout split</p>
+                <p className="mt-2 text-sm leading-6 text-[#d5d9e3]">
+                  {activeWorkoutPlan.title}: {activeWorkoutPlan.days.map((day) => `${day.dayLabel} ${day.focus}`).join(', ')}.
+                </p>
+              </div>
+            ) : null}
 
             {generatorError ? (
               <div className="rounded-lg border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-[#FF6B00]">
@@ -775,6 +898,14 @@ export const DietPage: React.FC = () => {
           </Card>
         ) : null}
 
+        {showGenerator && !hasPremiumAccess ? (
+          <PremiumFeatureGate
+            eyebrow="Premium nutrition"
+            title="AI diet generation is unlocked on the premium plan."
+            description="Upgrade to generate structured meal plans from your target weight, timeline, cuisine preferences, and budget."
+          />
+        ) : null}
+
         {error ? (
           <div className="rounded-lg border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-[#FF6B00]">
             {error}
@@ -803,9 +934,15 @@ export const DietPage: React.FC = () => {
                 Build a plan from your current weight, target weight, timeline, and cuisine preference so the meals feel realistic for your lifestyle.
               </p>
               <div className="flex justify-center">
-                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-                  Open AI Generator
-                </Button>
+                {hasPremiumAccess ? (
+                  <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                    Open AI Generator
+                  </Button>
+                ) : (
+                  <Button variant="accent" onClick={() => navigate('/billing')}>
+                    Unlock Premium
+                  </Button>
+                )}
               </div>
             </div>
           </Card>

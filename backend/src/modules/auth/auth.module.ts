@@ -7,7 +7,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { StringValue } from 'ms';
 
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { PremiumGuard } from 'src/common/guards/premium.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { SubscriptionsModule } from 'src/modules/subscriptions/subscriptions.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -19,6 +21,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
   imports: [
     ConfigModule,
     PassportModule,
+    SubscriptionsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -42,6 +45,10 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PremiumGuard,
     },
   ],
   exports: [AuthService],

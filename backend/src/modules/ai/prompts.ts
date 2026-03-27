@@ -8,6 +8,19 @@ type AiProfileContext = {
   activityLevel?: string;
 };
 
+type WorkoutContext = {
+  title?: string;
+  trainingDaysPerWeek?: number;
+  averageWorkoutMinutes?: number;
+  focusSummary?: string;
+  days?: Array<{
+    dayNumber: number;
+    dayLabel: string;
+    focus: string;
+    durationMinutes?: number;
+  }>;
+};
+
 export const workoutPrompt = (input: GenerateWorkoutPlanDto, profile?: AiProfileContext) =>
   `Generate a weekly workout plan for:
 weight: ${input.weight}
@@ -21,7 +34,30 @@ activity level: ${profile?.activityLevel ?? 'not provided'}
 
 Return a practical weekly schedule with exactly ${input.trainingDaysPerWeek} training days, plus recovery guidance for the remaining days.`;
 
-export const dietPrompt = (input: GenerateDietPlanDto, profile?: AiProfileContext) =>
+const formatWorkoutContext = (workout?: WorkoutContext) =>
+  workout
+    ? `
+active workout title: ${workout.title ?? 'not provided'}
+active workout days per week: ${workout.trainingDaysPerWeek ?? 'not provided'}
+average workout duration: ${workout.averageWorkoutMinutes ?? 'not provided'} minutes
+workout split focus: ${workout.focusSummary ?? 'not provided'}
+workout day map: ${
+  workout.days?.length
+    ? workout.days.map((day) => `${day.dayLabel} ${day.focus}`).join('; ')
+    : 'not provided'
+}`
+    : `
+active workout title: none
+active workout days per week: none
+average workout duration: none
+workout split focus: none
+workout day map: none`;
+
+export const dietPrompt = (
+  input: GenerateDietPlanDto,
+  profile?: AiProfileContext,
+  workout?: WorkoutContext,
+) =>
   `Generate a daily Indian diet plan for:
 goal: ${input.goal}
 current weight: ${input.currentWeightKg} kg
@@ -31,8 +67,10 @@ preference: ${input.preference}
 cuisine region: ${input.cuisineRegion}
 budget: ${input.budget}
 gender: ${profile?.gender ?? 'not provided'}
+${formatWorkoutContext(workout)}
 
 Calculate a realistic daily calorie target and macro split based on the weight-change timeline.
+Make the meal structure support the workout split, training frequency, and recovery demands when an active workout plan exists.
 Return breakfast, lunch, dinner, snacks, hydration, and macro notes with Indian food suggestions matched to the selected cuisine region.`;
 
 export const coachPrompt = (
@@ -102,7 +140,11 @@ Constraints:
 - no markdown fences
 - no prose outside JSON`;
 
-export const structuredDietPrompt = (input: GenerateDietPlanDto, profile?: AiProfileContext) =>
+export const structuredDietPrompt = (
+  input: GenerateDietPlanDto,
+  profile?: AiProfileContext,
+  workout?: WorkoutContext,
+) =>
   `Generate a daily Indian diet plan for:
 goal: ${input.goal}
 current weight: ${input.currentWeightKg} kg
@@ -112,12 +154,14 @@ preference: ${input.preference}
 cuisine region: ${input.cuisineRegion}
 budget: ${input.budget}
 gender: ${profile?.gender ?? 'not provided'}
+${formatWorkoutContext(workout)}
 
 Important:
 - calculate a realistic targetCalories value from the current weight, target weight, and timeline
 - keep the plan beginner-friendly and practical
 - match meal suggestions to the selected cuisine region wherever possible
 - adapt nutrition guidance appropriately for the provided gender when useful without relying on stereotypes
+- when an active workout plan exists, shape calorie distribution, meal timing, and protein/carbs around the workout split and recovery demands
 
 Return ONLY valid JSON with this shape:
 {

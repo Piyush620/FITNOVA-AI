@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, Pagination, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, Pagination, PremiumFeatureGate, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
@@ -65,6 +65,7 @@ const defaultGeneratorState: GenerateWorkoutPlanPayload = {
 
 export const WorkoutsPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
+  const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
@@ -274,6 +275,12 @@ export const WorkoutsPage: React.FC = () => {
   };
 
   const handleGeneratePlan = async () => {
+    if (!hasPremiumAccess) {
+      toastError('Premium subscription required to generate AI workout plans.');
+      navigate('/billing');
+      return;
+    }
+
     if (
       !generatorState.weight ||
       !generatorState.goal ||
@@ -422,12 +429,20 @@ export const WorkoutsPage: React.FC = () => {
                 <Button variant="secondary" onClick={() => void loadPlans()} isLoading={isRefreshing}>
                   Refresh
                 </Button>
-                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-                  Generate New Plan
-                </Button>
-                <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
-                  {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
-                </Button>
+                {hasPremiumAccess ? (
+                  <>
+                    <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                      Generate New Plan
+                    </Button>
+                    <Button variant="secondary" onClick={() => setShowGenerator((current) => !current)}>
+                      {showGenerator ? 'Hide AI Generator' : 'AI Generate & Save'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="accent" onClick={() => navigate('/billing')}>
+                    Unlock AI Generator
+                  </Button>
+                )}
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Card className="space-y-2 p-5">
@@ -485,7 +500,7 @@ export const WorkoutsPage: React.FC = () => {
           </div>
         </Card>
 
-        {showGenerator ? (
+        {showGenerator && hasPremiumAccess ? (
           <Card variant="gradient" className="space-y-5">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
@@ -577,6 +592,14 @@ export const WorkoutsPage: React.FC = () => {
           </Card>
         ) : null}
 
+        {showGenerator && !hasPremiumAccess ? (
+          <PremiumFeatureGate
+            eyebrow="Premium workouts"
+            title="AI workout generation is part of FitNova Premium."
+            description="Upgrade to create new AI workout plans, generate structured splits, and keep premium training tools unlocked."
+          />
+        ) : null}
+
         {error ? (
           <div className="rounded-lg border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-[#FF6B00]">
             {error}
@@ -605,9 +628,15 @@ export const WorkoutsPage: React.FC = () => {
                 Start with an AI split using your goal, experience level, training days, and equipment so your week feels realistic from day one.
               </p>
               <div className="flex justify-center">
-                <Button variant="secondary" onClick={() => setShowGenerator(true)}>
-                  Open AI Generator
-                </Button>
+                {hasPremiumAccess ? (
+                  <Button variant="secondary" onClick={() => setShowGenerator(true)}>
+                    Open AI Generator
+                  </Button>
+                ) : (
+                  <Button variant="accent" onClick={() => navigate('/billing')}>
+                    Unlock Premium
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
@@ -762,6 +791,9 @@ export const WorkoutsPage: React.FC = () => {
                         <p className="mt-2 text-sm text-gray-400">
                           Work through each day in order and use the completion actions to keep your weekly momentum visible.
                         </p>
+                        <p className="mt-2 text-sm text-[#aeb7cb]">
+                          Your active diet and calorie tracker can now follow this split's training demand day by day.
+                        </p>
                       </div>
                       <div className="min-w-[220px]">
                         <div className="flex items-center justify-between text-sm text-gray-400">
@@ -777,6 +809,11 @@ export const WorkoutsPage: React.FC = () => {
                           />
                         </div>
                       </div>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="secondary" size="sm" onClick={() => navigate('/diet')}>
+                        Build Matching Diet
+                      </Button>
                     </div>
                   </div>
 

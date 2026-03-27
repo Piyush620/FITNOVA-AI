@@ -126,6 +126,14 @@ export const ProfilePage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleRemovePhoto = () => {
+    setFormData((current) => ({ ...current, avatarUrl: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    toastSuccess('Profile photo removed. Save profile to apply the change.');
+  };
+
   const handleSaveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
@@ -159,7 +167,7 @@ export const ProfilePage: React.FC = () => {
     try {
       await usersAPI.updateProfile({
         fullName: formData.fullName.trim(),
-        avatarUrl: formData.avatarUrl || undefined,
+        avatarUrl: formData.avatarUrl.trim() ? formData.avatarUrl.trim() : null,
         age,
         gender: formData.gender,
         heightCm,
@@ -372,7 +380,7 @@ export const ProfilePage: React.FC = () => {
                 {formData.avatarUrl ? (
                   <Button
                     variant="secondary"
-                    onClick={() => setFormData((current) => ({ ...current, avatarUrl: '' }))}
+                    onClick={handleRemovePhoto}
                   >
                     Remove Photo
                   </Button>

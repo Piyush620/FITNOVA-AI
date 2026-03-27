@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { MainLayout } from '../components/Layout';
-import { Card, Button, Textarea } from '../components/Common';
+import { Card, Button, PremiumFeatureGate, Textarea } from '../components/Common';
 import { aiAPI } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import heroImage from '../assets/hero.png';
 
 type ChatRole = 'user' | 'assistant';
@@ -25,6 +26,8 @@ const starterPrompts = [
 ];
 
 export const CoachChatPage: React.FC = () => {
+  const { user } = useAuth();
+  const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -37,6 +40,14 @@ export const CoachChatPage: React.FC = () => {
     let isMounted = true;
 
     const hydrateHistory = async () => {
+      if (!hasPremiumAccess) {
+        if (isMounted) {
+          setMessages([]);
+          setIsHydrating(false);
+        }
+        return;
+      }
+
       try {
         const response = await aiAPI.getHistory(1, 6, 'coach-chat');
         if (!isMounted) {
@@ -86,7 +97,7 @@ export const CoachChatPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [hasPremiumAccess]);
 
   useEffect(() => {
     if (!messagesEndRef.current || messages.length === 0) {
@@ -103,6 +114,11 @@ export const CoachChatPage: React.FC = () => {
   }, [messages, isSending]);
 
   const handleSendMessage = async () => {
+    if (!hasPremiumAccess) {
+      setError('Premium subscription required to use the AI coach.');
+      return;
+    }
+
     const trimmedMessage = message.trim();
     if (!trimmedMessage || isSending) return;
 
@@ -150,6 +166,13 @@ export const CoachChatPage: React.FC = () => {
 
   return (
     <MainLayout>
+      {!hasPremiumAccess ? (
+        <PremiumFeatureGate
+          eyebrow="Premium coach"
+          title="AI coach chat is unlocked on the premium plan."
+          description="Upgrade to premium to access real AI coaching, stored coach history, and sharper weekly recovery or diet adjustments."
+        />
+      ) : (
       <div className="w-full space-y-6 lg:space-y-8">
         <Card variant="gradient" className="overflow-hidden p-0">
           <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
@@ -356,6 +379,7 @@ export const CoachChatPage: React.FC = () => {
           </div>
         </Card>
       </div>
+      )}
     </MainLayout>
   );
 };

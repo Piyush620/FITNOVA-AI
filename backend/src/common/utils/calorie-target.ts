@@ -5,6 +5,8 @@ type CalorieTargetInput = {
   weightKg?: number;
   activityLevel?: string;
   goal?: string;
+  trainingDaysPerWeek?: number;
+  averageWorkoutMinutes?: number;
 };
 
 const activityMultipliers: Array<{ match: string[]; value: number }> = [
@@ -34,6 +36,8 @@ export const estimateGoalCalories = ({
   weightKg,
   activityLevel,
   goal,
+  trainingDaysPerWeek,
+  averageWorkoutMinutes,
 }: CalorieTargetInput) => {
   const safeWeight = weightKg && weightKg > 0 ? weightKg : 70;
   const safeHeight = heightCm && heightCm > 0 ? heightCm : 170;
@@ -47,7 +51,12 @@ export const estimateGoalCalories = ({
       ? 10 * safeWeight + 6.25 * safeHeight - 5 * safeAge - 161
       : 10 * safeWeight + 6.25 * safeHeight - 5 * safeAge + 5;
 
-  const maintenance = Math.max(1400, roundToNearest25(bmr * activityMultiplier));
+  const workoutDays = trainingDaysPerWeek && trainingDaysPerWeek > 0 ? trainingDaysPerWeek : 0;
+  const averageMinutes =
+    averageWorkoutMinutes && averageWorkoutMinutes > 0 ? averageWorkoutMinutes : 45;
+  const workoutAdjustment =
+    workoutDays > 0 ? Math.min(450, Math.max(75, workoutDays * 35 + Math.round(averageMinutes * 1.1))) : 0;
+  const maintenance = Math.max(1400, roundToNearest25(bmr * activityMultiplier + workoutAdjustment));
 
   if (normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut')) {
     const deficit = Math.max(400, maintenance * 0.18);

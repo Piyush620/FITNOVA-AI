@@ -83,7 +83,7 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
           }
-          toastSuccess('Welcome back! 🎉');
+          toastSuccess('Welcome back!');
         } catch (error) {
           const message = axios.isAxiosError<ApiErrorResponse>(error)
             ? getApiErrorMessage(error.response?.data?.message)
@@ -118,7 +118,7 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
           }
-          toastSuccess('Account created! Welcome to FitNova 💪');
+          toastSuccess('Account created! Welcome to FitNova.');
         } catch (error) {
           const message = axios.isAxiosError<ApiErrorResponse>(error)
             ? getApiErrorMessage(error.response?.data?.message)

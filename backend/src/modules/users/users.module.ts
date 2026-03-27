@@ -18,12 +18,14 @@ import {
   WorkoutPlan,
   WorkoutPlanSchema,
 } from 'src/modules/workouts/schemas/workout-plan.schema';
+import { SubscriptionsModule } from 'src/modules/subscriptions/subscriptions.module';
 
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 @Module({
   imports: [
+    SubscriptionsModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: WorkoutPlan.name, schema: WorkoutPlanSchema },

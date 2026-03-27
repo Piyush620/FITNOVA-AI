@@ -17,6 +17,7 @@ import {
   WorkoutPlan,
   WorkoutPlanDocument,
 } from 'src/modules/workouts/schemas/workout-plan.schema';
+import { SubscriptionsService } from 'src/modules/subscriptions/subscriptions.service';
 
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
@@ -32,6 +33,7 @@ export class UsersService {
     private readonly calorieLogModel: Model<CalorieLogDocument>,
     @InjectModel(ProgressCheckIn.name)
     private readonly progressCheckInModel: Model<ProgressCheckInDocument>,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   async getCurrentUser(userId: string) {
@@ -40,11 +42,14 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
+    const subscription = await this.subscriptionsService.getCurrentSubscription(userId);
+
     return {
       id: user._id.toString(),
       email: user.email,
       roles: user.roles,
       profile: user.profile,
+      subscription,
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -57,9 +62,14 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
+    const normalizedPayload = {
+      ...payload,
+      avatarUrl: payload.avatarUrl ?? undefined,
+    };
+
     user.profile = {
       ...user.profile,
-      ...payload,
+      ...normalizedPayload,
     };
     await user.save();
 
@@ -108,18 +118,34 @@ export class UsersService {
     const monthlyLoggedDays = new Set(monthlyLogs.map((log) => log.loggedDate)).size;
     const averageLoggedDayCalories =
       monthlyLoggedDays > 0 ? Math.round(monthlyCalories / monthlyLoggedDays) : 0;
-    const calorieTarget = resolveGoalCalorieTarget(
-      {
-        age: user.profile.age,
-        gender: user.profile.gender,
-        heightCm: user.profile.heightCm,
-        weightKg: user.profile.weightKg,
-        activityLevel: user.profile.activityLevel,
-        goal: user.profile.goal,
-      },
+    const activeDietTarget =
       activeDietPlan?.targetCalories ??
-        activeDietPlan?.days?.find((day) => typeof day.targetCalories === 'number')?.targetCalories,
-    );
+      activeDietPlan?.days?.find((day) => typeof day.targetCalories === 'number')?.targetCalories;
+    const activeWorkoutAverageMinutes =
+      activeWorkoutPlan?.days?.length
+        ? Math.round(
+            activeWorkoutPlan.days.reduce(
+              (sum, day) => sum + (day.durationMinutes ?? 45),
+              0,
+            ) / activeWorkoutPlan.days.length,
+          )
+        : undefined;
+    const calorieTarget =
+      typeof activeDietTarget === 'number' && Number.isFinite(activeDietTarget) && activeDietTarget > 0
+        ? activeDietTarget
+        : resolveGoalCalorieTarget(
+            {
+              age: user.profile.age,
+              gender: user.profile.gender,
+              heightCm: user.profile.heightCm,
+              weightKg: user.profile.weightKg,
+              activityLevel: user.profile.activityLevel,
+              goal: user.profile.goal,
+              trainingDaysPerWeek: activeWorkoutPlan?.days?.length,
+              averageWorkoutMinutes: activeWorkoutAverageMinutes,
+            },
+            undefined,
+          );
 
     return {
       greeting: `Welcome back, ${user.profile.fullName.split(' ')[0]}`,

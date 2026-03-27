@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsString } from 'class-validator';
+import { IsIn, IsString, IsUrl } from 'class-validator';
 
 export class CreateCheckoutSessionDto {
   @ApiProperty({ enum: ['monthly', 'yearly'] })
@@ -8,9 +8,11 @@ export class CreateCheckoutSessionDto {
 
   @ApiProperty()
   @IsString()
+  @IsUrl({ require_tld: false })
   successUrl!: string;
 
   @ApiProperty()
   @IsString()
+  @IsUrl({ require_tld: false })
   cancelUrl!: string;
 }

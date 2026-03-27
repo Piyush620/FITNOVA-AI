@@ -16,6 +16,7 @@ describe('UsersService', () => {
   let mockDietPlanModel: any;
   let mockCalorieLogModel: any;
   let mockProgressCheckInModel: any;
+  let mockSubscriptionsService: any;
 
   beforeEach(async () => {
     mockUserModel = {
@@ -34,6 +35,19 @@ describe('UsersService', () => {
     };
     mockProgressCheckInModel = {
       find: jest.fn(),
+    };
+    mockSubscriptionsService = {
+      getCurrentSubscription: jest.fn().mockResolvedValue({
+        tier: 'free',
+        plan: 'free',
+        status: 'inactive',
+        hasPremiumAccess: false,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -59,8 +73,18 @@ describe('UsersService', () => {
           provide: getModelToken(ProgressCheckIn.name),
           useValue: mockProgressCheckInModel,
         },
+        {
+          provide: 'SubscriptionsService',
+          useValue: mockSubscriptionsService,
+        },
       ],
-    }).compile();
+    })
+      .useMocker((token) => {
+        if (typeof token === 'function' && token.name === 'SubscriptionsService') {
+          return mockSubscriptionsService;
+        }
+      })
+      .compile();
 
     service = module.get<UsersService>(UsersService);
   });
@@ -97,6 +121,17 @@ describe('UsersService', () => {
         email: mockUser.email,
         roles: mockUser.roles,
         profile: mockUser.profile,
+        subscription: {
+          tier: 'free',
+          plan: 'free',
+          status: 'inactive',
+          hasPremiumAccess: false,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        },
         lastLoginAt: mockUser.lastLoginAt,
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,
@@ -143,6 +178,17 @@ describe('UsersService', () => {
               goal: 'fat loss',
               heightCm: 185,
               weightKg: 85,
+            },
+            subscription: {
+              tier: 'free',
+              plan: 'free',
+              status: 'inactive',
+              hasPremiumAccess: false,
+              stripeCustomerId: null,
+              stripeSubscriptionId: null,
+              currentPeriodStart: null,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: false,
             },
             lastLoginAt: null,
             createdAt: undefined,
@@ -318,7 +364,7 @@ describe('UsersService', () => {
       expect(result.remainingCalories).toBe(2400);
     });
 
-    it('pulls an unrealistic active fat-loss target back toward a safer range', async () => {
+    it('uses the active diet target directly when a diet plan is active', async () => {
       const userId = '507f1f77bcf86cd799439011';
       const user = {
         _id: { toString: () => userId },
@@ -369,8 +415,8 @@ describe('UsersService', () => {
 
       const result = await service.getDashboardSnapshot(userId);
 
-      expect(result.caloriesTarget).toBe(2300);
-      expect(result.remainingCalories).toBe(2300);
+      expect(result.caloriesTarget).toBe(3325);
+      expect(result.remainingCalories).toBe(3325);
     });
   });
 });

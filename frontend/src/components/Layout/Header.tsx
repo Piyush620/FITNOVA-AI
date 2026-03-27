@@ -22,6 +22,7 @@ export const Header: React.FC = () => {
     { label: 'Diet', path: '/diet' },
     { label: 'Calories', path: '/calories' },
     { label: 'AI Coach', path: '/coach' },
+    { label: 'Billing', path: '/billing' },
   ];
 
   const isActivePath = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);

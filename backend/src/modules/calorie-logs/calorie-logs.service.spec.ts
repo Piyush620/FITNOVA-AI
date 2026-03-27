@@ -179,7 +179,7 @@ describe('CalorieLogsService', () => {
     expect(result.targetCalories).toBe(1750);
   });
 
-  it('clamps an unrealistic active fat-loss target instead of trusting it directly', async () => {
+  it('uses the active diet target directly when one exists', async () => {
     mockCalorieLogModel.find.mockReturnValue({
       lean: jest.fn().mockResolvedValue([]),
     });
@@ -203,6 +203,6 @@ describe('CalorieLogsService', () => {
 
     const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-03-27');
 
-    expect(result.targetCalories).toBe(2300);
+    expect(result.targetCalories).toBe(3325);
   });
 });

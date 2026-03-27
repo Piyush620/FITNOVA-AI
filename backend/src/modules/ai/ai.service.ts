@@ -187,13 +187,14 @@ export class AiService {
 
   async generateDietPlan(userId: string, payload: GenerateDietPlanDto) {
     const user = await this.usersService.getCurrentUser(userId);
+    const activeWorkoutContext = await this.getActiveWorkoutContext(userId);
     const output = await this.generateText(
       'You are FitNova AI, an expert sports nutrition coach focused on Indian meal planning.',
       dietPrompt(payload, {
         gender: user.profile.gender,
         goal: user.profile.goal,
         activityLevel: user.profile.activityLevel,
-      }),
+      }, activeWorkoutContext),
     );
     await this.persistInteraction(userId, AiInteractionType.DIET_PLAN, { ...payload }, output);
 
@@ -246,17 +247,19 @@ export class AiService {
 
   async generateAndSaveDietPlan(userId: string, payload: GenerateDietPlanDto) {
     const user = await this.usersService.getCurrentUser(userId);
+    const activeWorkoutContext = await this.getActiveWorkoutContext(userId);
     const output = await this.generateText(
       'You are FitNova AI, an expert Indian nutrition coach that returns strict JSON.',
       structuredDietPrompt(payload, {
         gender: user.profile.gender,
         goal: user.profile.goal,
         activityLevel: user.profile.activityLevel,
-      }),
+      }, activeWorkoutContext),
     );
     const parsedPlan = this.normalizeDietPlan(
       this.parseJsonResponse(output) as Record<string, unknown>,
       payload,
+      activeWorkoutContext,
     );
     const savedPlan = await this.dietService.createPlan(userId, parsedPlan);
 
@@ -560,6 +563,18 @@ export class AiService {
   private normalizeDietPlan(
     plan: Record<string, unknown>,
     input: GenerateDietPlanDto,
+    workout?: {
+      title?: string;
+      trainingDaysPerWeek?: number;
+      averageWorkoutMinutes?: number;
+      focusSummary?: string;
+      days?: Array<{
+        dayNumber: number;
+        dayLabel: string;
+        focus: string;
+        durationMinutes?: number;
+      }>;
+    },
   ): CreateDietPlanDto {
     const sourceDays = Array.isArray(plan.days)
       ? plan.days.filter(
@@ -577,6 +592,7 @@ export class AiService {
 
     const normalizedDays = this.weekdayLabels.map((label, index) => {
       const template = sourceDays[index] ?? sourceDays[index % sourceDays.length];
+      const matchingWorkoutDay = workout?.days?.find((day) => day.dayLabel === label);
       const rawMeals = Array.isArray(template.meals)
         ? template.meals.filter(
             (meal): meal is Record<string, unknown> => !!meal && typeof meal === 'object',
@@ -620,6 +636,19 @@ export class AiService {
         }
       }
 
+      if (matchingWorkoutDay && !normalizedMeals.some((meal) => meal.type === 'post-workout')) {
+        normalizedMeals.push({
+          type: 'post-workout',
+          title: 'Post-workout recovery meal',
+          description: `Recovery-focused meal for ${matchingWorkoutDay.focus.toLowerCase()} day.`,
+          items: [],
+          calories: undefined,
+          proteinGrams: undefined,
+          carbsGrams: undefined,
+          fatsGrams: undefined,
+        });
+      }
+
       normalizedMeals.sort(
         (left, right) =>
           this.dietMealOrder.indexOf(left.type) - this.dietMealOrder.indexOf(right.type),
@@ -628,13 +657,17 @@ export class AiService {
       return {
         dayNumber: index + 1,
         dayLabel: label,
-        theme: this.getOptionalTrimmedString(template.theme, 120),
+        theme:
+          this.getOptionalTrimmedString(template.theme, 120) ??
+          (matchingWorkoutDay ? `${matchingWorkoutDay.focus} fuel and recovery` : undefined),
         meals: normalizedMeals,
         targetCalories:
           this.getOptionalBoundedInteger(template.targetCalories, 0, 6000) ??
           this.getOptionalBoundedInteger(plan.targetCalories, 1000, 6000),
       };
     }) as unknown as CreateDietPlanDto['days'];
+
+    const alignedDays = this.alignDietDaysWithWorkout(normalizedDays, workout);
 
     return {
       title: this.getTrimmedString(plan.title, `${input.goal} Diet Plan`, 120),
@@ -645,8 +678,8 @@ export class AiService {
       isAiGenerated: true,
       startDate: this.getOptionalTrimmedString(plan.startDate),
       endDate: this.getOptionalTrimmedString(plan.endDate),
-      notes: this.getOptionalTrimmedString(plan.notes, 500),
-      days: normalizedDays,
+      notes: this.buildDietWorkoutLinkNote(this.getOptionalTrimmedString(plan.notes, 500), workout),
+      days: alignedDays,
     } as CreateDietPlanDto;
   }
 
@@ -747,6 +780,114 @@ export class AiService {
           : 'Estimated from natural-language meal input.',
       parsedItems,
     };
+  }
+
+  private async getActiveWorkoutContext(userId: string) {
+    const activeWorkoutPlan = await this.workoutPlanModel
+      .findOne({ userId: new Types.ObjectId(userId), status: 'active' })
+      .lean();
+
+    if (!activeWorkoutPlan) {
+      return undefined;
+    }
+
+    const trainingDaysPerWeek = activeWorkoutPlan.days.length;
+    const averageWorkoutMinutes =
+      trainingDaysPerWeek > 0
+        ? Math.round(
+            activeWorkoutPlan.days.reduce(
+              (sum, day) => sum + (day.durationMinutes ?? 45),
+              0,
+            ) / trainingDaysPerWeek,
+          )
+        : undefined;
+
+    return {
+      title: activeWorkoutPlan.title,
+      trainingDaysPerWeek,
+      averageWorkoutMinutes,
+      days: activeWorkoutPlan.days
+        .slice()
+        .sort((left, right) => left.dayNumber - right.dayNumber)
+        .map((day) => ({
+          dayNumber: day.dayNumber,
+          dayLabel: day.dayLabel,
+          focus: day.focus,
+          durationMinutes: day.durationMinutes,
+        })),
+      focusSummary: activeWorkoutPlan.days
+        .map((day) => `${day.dayLabel}: ${day.focus}`)
+        .join('; '),
+    };
+  }
+
+  private alignDietDaysWithWorkout(
+    days: CreateDietPlanDto['days'],
+    workout?: {
+      days?: Array<{
+        dayLabel: string;
+        focus: string;
+      }>;
+      averageWorkoutMinutes?: number;
+    },
+  ) {
+    if (!workout?.days?.length) {
+      return days;
+    }
+
+    const baseTarget = Math.round(
+      days.reduce((sum, day) => sum + (day.targetCalories ?? 0), 0) / Math.max(days.length, 1),
+    );
+
+    if (!baseTarget) {
+      return days;
+    }
+
+    const trainingDayLabels = new Set(workout.days.map((day) => day.dayLabel));
+    const trainingDayCount = trainingDayLabels.size;
+    const restDayCount = Math.max(days.length - trainingDayCount, 0);
+    const trainingBoost = Math.max(
+      100,
+      Math.min(275, Math.round((workout.averageWorkoutMinutes ?? 45) * 2.2)),
+    );
+    const restReduction =
+      restDayCount > 0 ? Math.round((trainingBoost * trainingDayCount) / restDayCount) : 0;
+
+    return days.map((day) => {
+      const workoutDay = workout.days?.find((entry) => entry.dayLabel === day.dayLabel);
+
+      return {
+        ...day,
+        targetCalories: workoutDay
+          ? Math.min(6000, baseTarget + trainingBoost)
+          : Math.max(1200, baseTarget - restReduction),
+      };
+    });
+  }
+
+  private buildDietWorkoutLinkNote(
+    existingNotes?: string,
+    workout?: {
+      title?: string;
+      days?: Array<{
+        dayLabel: string;
+        focus: string;
+      }>;
+    },
+  ) {
+    if (!workout?.days?.length) {
+      return existingNotes;
+    }
+
+    const workoutSummary = `Nutrition synced to workout split${workout.title ? ` "${workout.title}"` : ''}: ${workout.days
+      .map((day) => `${day.dayLabel} ${day.focus}`)
+      .join(', ')}. Training days carry more calories and recovery support.`;
+
+    if (!existingNotes) {
+      return workoutSummary.slice(0, 500);
+    }
+
+    return `${existingNotes}\n\n${workoutSummary}`.slice(0, 500);
   }
 
   private getTrimmedString(value: unknown, fallback = '', maxLength = 255) {

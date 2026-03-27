@@ -12,6 +12,7 @@ import { Model } from 'mongoose';
 import { StringValue } from 'ms';
 
 import { Role } from 'src/common/enums/role.enum';
+import { SubscriptionsService } from 'src/modules/subscriptions/subscriptions.service';
 
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -24,6 +25,7 @@ export class AuthService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   async register(payload: RegisterDto) {
@@ -87,11 +89,14 @@ export class AuthService {
       throw new NotFoundException('User not found.');
     }
 
+    const subscription = await this.subscriptionsService.getCurrentSubscription(userId);
+
     return {
       id: user._id.toString(),
       email: user.email,
       roles: user.roles,
       profile: user.profile,
+      subscription,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -108,12 +113,15 @@ export class AuthService {
     user.lastLoginAt = new Date();
     await user.save();
 
+    const subscription = await this.subscriptionsService.getCurrentSubscription(user.id);
+
     return {
       user: {
         id: user.id,
         email: user.email,
         roles: user.roles,
         profile: user.profile,
+        subscription,
       },
       tokens,
     };

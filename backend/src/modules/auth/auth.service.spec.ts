@@ -21,6 +21,7 @@ describe('AuthService', () => {
   let mockUserModel: any;
   let mockJwtService: { signAsync: jest.Mock };
   let mockConfigService: { get: jest.Mock; getOrThrow: jest.Mock };
+  let mockSubscriptionsService: { getCurrentSubscription: jest.Mock };
   let mockBcryptHash: jest.Mock;
   let mockBcryptCompare: jest.Mock;
 
@@ -54,6 +55,19 @@ describe('AuthService', () => {
         throw new Error(`Unexpected config key: ${key}`);
       }),
     };
+    mockSubscriptionsService = {
+      getCurrentSubscription: jest.fn().mockResolvedValue({
+        tier: 'free',
+        plan: 'free',
+        status: 'inactive',
+        hasPremiumAccess: false,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      }),
+    };
 
     mockBcryptHash = bcrypt.hash as jest.Mock;
     mockBcryptCompare = bcrypt.compare as jest.Mock;
@@ -72,11 +86,21 @@ describe('AuthService', () => {
           useValue: mockConfigService,
         },
         {
+          provide: 'SubscriptionsService',
+          useValue: mockSubscriptionsService,
+        },
+        {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
         },
       ],
-    }).compile();
+    })
+      .useMocker((token) => {
+        if (typeof token === 'function' && token.name === 'SubscriptionsService') {
+          return mockSubscriptionsService;
+        }
+      })
+      .compile();
 
     service = module.get<AuthService>(AuthService);
   });
@@ -131,6 +155,7 @@ describe('AuthService', () => {
         },
       });
       expect(result.user.email).toBe(registerDto.email);
+      expect(result.user.subscription?.hasPremiumAccess).toBe(false);
       expect(result.tokens.accessToken).toBe('test-token');
       expect(result.tokens.refreshToken).toBe('test-token');
       expect(save).toHaveBeenCalled();
@@ -219,6 +244,17 @@ describe('AuthService', () => {
         email: mockUser.email,
         roles: mockUser.roles,
         profile: mockUser.profile,
+        subscription: {
+          tier: 'free',
+          plan: 'free',
+          status: 'inactive',
+          hasPremiumAccess: false,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          currentPeriodStart: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false,
+        },
         createdAt: mockUser.createdAt,
         updatedAt: mockUser.updatedAt,
       });

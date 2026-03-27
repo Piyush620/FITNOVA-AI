@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -8,6 +8,7 @@ import {
   ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FastifyRequest } from 'fastify';
 
 import { Public } from 'src/common/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -25,18 +26,28 @@ export class SubscriptionsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get subscription and billing configuration status' })
   @ApiOkResponse({
-    description: 'Returns whether Stripe and PostgreSQL billing configuration values are present.',
+    description: 'Returns whether Stripe billing configuration is present and billing persistence is ready.',
   })
   getStatus() {
     return this.subscriptionsService.getStatus();
   }
 
+  @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get the current authenticated user subscription summary' })
+  @ApiOkResponse({
+    description: 'Returns the current subscription tier, status, and billing period details.',
+  })
+  getCurrentSubscription(@CurrentUser() user: JwtPayload) {
+    return this.subscriptionsService.getCurrentSubscription(user.sub);
+  }
+
   @Post('checkout-session')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a Stripe checkout session scaffold for the authenticated user' })
+  @ApiOperation({ summary: 'Create a Stripe checkout session for the authenticated user' })
   @ApiBody({ type: CreateCheckoutSessionDto })
   @ApiOkResponse({
-    description: 'Returns the scaffold payload that would be used to create a Stripe checkout session.',
+    description: 'Returns the Stripe checkout session id and redirect URL.',
   })
   @ApiServiceUnavailableResponse({
     description: 'Stripe secret key or the requested price id is not configured.',
@@ -48,21 +59,45 @@ export class SubscriptionsController {
     return this.subscriptionsService.createCheckoutSession(user.sub, payload);
   }
 
+  @Post('checkout-session/confirm')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Confirm a Stripe checkout session and sync subscription state' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['sessionId'],
+      properties: {
+        sessionId: {
+          type: 'string',
+        },
+      },
+    },
+  })
+  confirmCheckoutSession(
+    @CurrentUser() user: JwtPayload,
+    @Body('sessionId') sessionId: string,
+  ) {
+    return this.subscriptionsService.confirmCheckoutSession(user.sub, sessionId);
+  }
+
   @Public()
   @Post('webhook')
-  @ApiOperation({ summary: 'Receive Stripe webhook events (scaffold)' })
+  @ApiOperation({ summary: 'Receive Stripe webhook events' })
   @ApiHeader({
     name: 'stripe-signature',
     required: false,
     description: 'Stripe webhook signature header used for verification.',
   })
   @ApiOkResponse({
-    description: 'Returns scaffold verification status when webhook configuration is present.',
+    description: 'Returns webhook verification status when Stripe signature validation succeeds.',
   })
   @ApiServiceUnavailableResponse({
     description: 'Stripe webhook secret or signature header is missing.',
   })
-  handleWebhook(@Headers('stripe-signature') stripeSignature?: string) {
-    return this.subscriptionsService.handleWebhook(!!stripeSignature);
+  handleWebhook(
+    @Req() request: FastifyRequest & { rawBody?: Buffer | string },
+    @Headers('stripe-signature') stripeSignature?: string,
+  ) {
+    return this.subscriptionsService.handleWebhook(request.rawBody, stripeSignature);
   }
 }

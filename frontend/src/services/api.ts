@@ -16,6 +16,9 @@ import type {
   DashboardSummary,
   GenerateWorkoutPlanPayload,
   GenerateDietPlanPayload,
+  SubscriptionConfigStatus,
+  SubscriptionSummary,
+  CheckoutSessionResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
@@ -50,7 +53,7 @@ type CoachChatResponse = {
 
 type UpdateUserProfilePayload = {
   fullName?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   age?: number;
   gender?: string;
   heightCm?: number;
@@ -261,6 +264,21 @@ export const aiAPI = {
 
   estimateCalorieLog: (payload: { loggedDate: string; mealType: CalorieLog['mealType']; rawInput: string }) =>
     apiClient.post<CalorieEstimateResponse>('/ai/calorie-estimate', payload),
+};
+
+export const subscriptionsAPI = {
+  getStatus: () => apiClient.get<SubscriptionConfigStatus>('/subscriptions/status'),
+
+  getCurrent: () => apiClient.get<SubscriptionSummary>('/subscriptions/me'),
+
+  confirmCheckoutSession: (sessionId: string) =>
+    apiClient.post<SubscriptionSummary>('/subscriptions/checkout-session/confirm', { sessionId }),
+
+  createCheckoutSession: (payload: {
+    plan: 'monthly' | 'yearly';
+    successUrl: string;
+    cancelUrl: string;
+  }) => apiClient.post<CheckoutSessionResponse>('/subscriptions/checkout-session', payload),
 };
 
 export default apiClient;

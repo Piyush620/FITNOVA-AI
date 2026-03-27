@@ -5,6 +5,7 @@ import { Model, Types } from 'mongoose';
 import { resolveGoalCalorieTarget } from 'src/common/utils/calorie-target';
 import { User, UserDocument } from 'src/modules/auth/schemas/user.schema';
 import { DietPlan, DietPlanDocument } from 'src/modules/diet/schemas/diet-plan.schema';
+import { WorkoutPlan, WorkoutPlanDocument } from 'src/modules/workouts/schemas/workout-plan.schema';
 
 import { CreateCalorieLogDto } from './dto/create-calorie-log.dto';
 import { UpdateCalorieLogDto } from './dto/update-calorie-log.dto';
@@ -33,6 +34,8 @@ export class CalorieLogsService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(DietPlan.name)
     private readonly dietPlanModel: Model<DietPlanDocument>,
+    @InjectModel(WorkoutPlan.name)
+    private readonly workoutPlanModel: Model<WorkoutPlanDocument>,
   ) {}
 
   async createLog(userId: string, payload: CreateCalorieLogDto) {
@@ -124,9 +127,9 @@ export class CalorieLogsService {
   async getDailyLogs(userId: string, date?: string) {
     const normalizedDate = this.normalizeDate(date);
     const objectId = new Types.ObjectId(userId);
-    const [logs, targetCalories] = await Promise.all([
+    const [logs, targetContext] = await Promise.all([
       this.calorieLogModel.find({ userId: objectId, loggedDate: normalizedDate }).lean(),
-      this.resolveTargetCalories(userId),
+      this.resolveTargetCalories(userId, normalizedDate),
     ]);
 
     const sortedLogs = [...logs].sort(
@@ -139,7 +142,10 @@ export class CalorieLogsService {
 
     return {
       date: normalizedDate,
-      targetCalories,
+      targetCalories: targetContext.targetCalories,
+      targetSource: targetContext.targetSource,
+      plannedNutritionDay: targetContext.plannedNutritionDay,
+      activeWorkoutDay: targetContext.activeWorkoutDay,
       totals,
       entries: sortedLogs.map((entry) => this.serializeLean(entry)),
     };
@@ -148,7 +154,7 @@ export class CalorieLogsService {
   async getMonthlySummary(userId: string, month?: string) {
     const normalizedMonth = this.normalizeMonth(month);
     const objectId = new Types.ObjectId(userId);
-    const [user, targetCalories, logs] = await Promise.all([
+    const [user, targetContext, logs] = await Promise.all([
       this.userModel.findById(userId).lean(),
       this.resolveTargetCalories(userId),
       this.calorieLogModel
@@ -198,7 +204,7 @@ export class CalorieLogsService {
 
     return {
       month: normalizedMonth,
-      targetCalories,
+      targetCalories: targetContext.targetCalories,
       totalCalories,
       averageDailyCalories,
       averageLoggedDayCalories,
@@ -212,7 +218,7 @@ export class CalorieLogsService {
       recommendations: this.buildRecommendations({
         goal: user?.profile?.goal,
         currentWeightKg: user?.profile?.weightKg,
-        targetCalories,
+        targetCalories: targetContext.targetCalories,
         averageLoggedDayCalories,
         averageProteinGrams,
         daysLogged,
@@ -238,28 +244,94 @@ export class CalorieLogsService {
     );
   }
 
-  private async resolveTargetCalories(userId: string) {
+  private async resolveTargetCalories(userId: string, date?: string) {
     const objectId = new Types.ObjectId(userId);
-    const [user, activeDietPlan] = await Promise.all([
+    const [user, activeDietPlan, activeWorkoutPlan] = await Promise.all([
       this.userModel.findById(userId).lean(),
       this.dietPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
+      this.workoutPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
     ]);
 
+    const targetDate = date ? new Date(`${date}T12:00:00.000Z`) : new Date();
+    const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(
+      targetDate,
+    );
+    const matchedDietDay = activeDietPlan?.days?.find((day) => day.dayLabel === dayLabel);
+    const matchedWorkoutDay = activeWorkoutPlan?.days?.find((day) => day.dayLabel === dayLabel);
+
     const dietTarget =
+      matchedDietDay?.targetCalories ??
       activeDietPlan?.targetCalories ??
       activeDietPlan?.days?.find((day) => typeof day.targetCalories === 'number')?.targetCalories;
 
-    return resolveGoalCalorieTarget(
+    if (typeof dietTarget === 'number' && Number.isFinite(dietTarget) && dietTarget > 0) {
+      return {
+        targetCalories: dietTarget,
+        targetSource: matchedDietDay ? 'active-diet-day' : 'active-diet-plan',
+        plannedNutritionDay: matchedDietDay
+          ? {
+              dayLabel: matchedDietDay.dayLabel,
+              theme: matchedDietDay.theme,
+              targetCalories: matchedDietDay.targetCalories ?? dietTarget,
+            }
+          : null,
+        activeWorkoutDay: matchedWorkoutDay
+          ? {
+              dayLabel: matchedWorkoutDay.dayLabel,
+              focus: matchedWorkoutDay.focus,
+              durationMinutes: matchedWorkoutDay.durationMinutes,
+              isTrainingDay: true,
+            }
+          : null,
+      };
+    }
+
+    const estimatedTarget = resolveGoalCalorieTarget(
       {
-      age: user?.profile?.age,
-      gender: user?.profile?.gender,
-      heightCm: user?.profile?.heightCm,
-      weightKg: user?.profile?.weightKg,
-      activityLevel: user?.profile?.activityLevel,
-      goal: user?.profile?.goal,
+        age: user?.profile?.age,
+        gender: user?.profile?.gender,
+        heightCm: user?.profile?.heightCm,
+        weightKg: user?.profile?.weightKg,
+        activityLevel: user?.profile?.activityLevel,
+        goal: user?.profile?.goal,
+        trainingDaysPerWeek: activeWorkoutPlan?.days?.length,
+        averageWorkoutMinutes:
+          activeWorkoutPlan?.days?.length
+            ? Math.round(
+                activeWorkoutPlan.days.reduce(
+                  (sum, day) => sum + (day.durationMinutes ?? 45),
+                  0,
+                ) / activeWorkoutPlan.days.length,
+              )
+            : undefined,
       },
       dietTarget,
     );
+
+    const workoutAdjustment = matchedWorkoutDay
+      ? Math.max(75, Math.min(225, Math.round((matchedWorkoutDay.durationMinutes ?? 45) * 1.8)))
+      : 0;
+
+    return {
+      targetCalories: matchedWorkoutDay
+        ? Math.min(4500, estimatedTarget + workoutAdjustment)
+        : estimatedTarget,
+      targetSource: matchedWorkoutDay ? 'workout-adjusted-estimate' : 'goal-estimate',
+      plannedNutritionDay: null,
+      activeWorkoutDay: matchedWorkoutDay
+        ? {
+            dayLabel: matchedWorkoutDay.dayLabel,
+            focus: matchedWorkoutDay.focus,
+            durationMinutes: matchedWorkoutDay.durationMinutes,
+            isTrainingDay: true,
+          }
+        : {
+            dayLabel,
+            focus: 'Recovery / rest',
+            durationMinutes: 0,
+            isTrainingDay: false,
+          },
+    };
   }
 
   private buildRecommendations(input: {

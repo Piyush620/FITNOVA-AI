@@ -50,9 +50,17 @@ export const Select: React.FC<SelectProps> = ({
           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
         } ${className}`}
       >
-        {placeholder && <option value="">{placeholder}</option>}
+        {placeholder && (
+          <option value="" className="bg-[#11131d] text-[#F7F7F7]">
+            {placeholder}
+          </option>
+        )}
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            className="bg-[#11131d] text-[#F7F7F7]"
+          >
             {option.label}
           </option>
         ))}

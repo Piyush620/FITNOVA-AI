@@ -42,7 +42,14 @@
 - [x] Image-backed hero sections are used across key frontend surfaces
 - [x] Live calorie tracking with AI food estimation, confirm-and-save flow, daily totals, monthly summaries, and recommendations
 - [x] AI structured-output guardrails and coach chat history hydration
-- [ ] Billing is still scaffold-only
+- [x] Stripe billing flow is live end to end in local test mode
+- [x] Billing success sync confirms checkout sessions directly after Stripe return
+- [x] Calorie tracker uses goal-based estimated calories before any active diet plan exists
+- [x] Active diet plan calories now override the tracker target directly
+- [x] Calories page follows the next unfinished active diet meal slot
+- [x] Diet generation now uses the active workout split to shape day calories and recovery meal structure
+- [x] Calorie tracker now returns workout-aware daily target context and source messaging
+- [x] Workout detail flow now links directly into building a matching diet
 - [ ] Queue workers are still scaffold-only
 - [ ] Mobile app not started
 
@@ -77,6 +84,11 @@
 - [x] Dashboard/profile/workout/diet pages visually aligned with the newer premium art direction
 - [x] Tailwind source detection / utility generation fixed
 - [x] Live calorie tracker for AI-estimated food logging with manual fallback and daily/monthly review
+- [x] Goal-estimated calorie target fallback before any diet plan exists
+- [x] Active diet plan target sync into dashboard and calorie tracker
+- [x] Next active diet meal guidance on the calorie logging page
+- [x] Workout split context now drives diet-day calorie shaping and post-workout nutrition support
+- [x] Calorie tracker now adjusts daily messaging/targets from active workout and active diet day context
 
 ## Remaining High-Priority Work
 
@@ -104,6 +116,10 @@
 - [x] Add success feedback/toasts for activate, complete, and generate actions
 - [x] Add skeleton/loading polish where appropriate
 - [x] Add tasteful motion/animation polish across key frontend surfaces
+- [x] Fix unreadable native select options on signup/profile
+- [x] Fix dashboard hero CTA clipping/layout bug
+- [x] Fix profile photo removal flow
+- [x] Add clearer calorie-target source messaging
 
 ### 3. AI Product Layer
 
@@ -122,14 +138,19 @@
 - [x] Add monthly calorie summary view with averages, trends, and goal comparison
 - [x] Connect monthly calorie review and adjustment suggestions
 - [x] Save raw food input, parsed AI items, source, and confidence alongside calorie logs
+- [x] Show whether the tracker is using an estimated goal target or an active diet target
+- [x] Sync the calorie tracker target immediately after diet plan creation/activation
+- [x] Move calorie logger date/meal type to the next unfinished active diet meal slot
 
 ### 5. Billing
 
-- [ ] Connect real Stripe SDK checkout session creation
-- [ ] Persist customers/subscriptions to PostgreSQL
-- [ ] Verify Stripe webhook signatures
-- [ ] Update subscription status from webhook events
-- [ ] Add premium feature gating in backend and frontend
+- [x] Connect real Stripe SDK checkout session creation
+- [x] Persist customers/subscriptions to MongoDB
+- [x] Verify Stripe webhook signatures
+- [x] Update subscription status from webhook events
+- [x] Complete local Stripe checkout QA for monthly billing
+- [x] Add premium feature gating in backend and frontend
+- [x] Confirm Stripe checkout sessions directly on return to avoid stale post-checkout state
 
 ### 6. Queue / Async Jobs
 
@@ -156,7 +177,7 @@
 - [x] Update README to match the actual app status and frontend architecture
 - [ ] Verify `.env.example` coverage and variable names
 - [ ] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
-
+    
 ### 9. Mobile
 
 - [ ] Create `mobile/` Expo app
@@ -193,8 +214,8 @@
 
 ## Definition Of "Backend Production Ready"
 
-- [ ] Stripe billing is live, verified, and persisted
-- [ ] PostgreSQL persistence is real, not scaffold-only
+- [x] Stripe billing is live, verified, and persisted in local Stripe test mode
+- [x] Billing persistence is real in MongoDB
 - [ ] Redis/BullMQ workers are real, not scaffold-only
 - [ ] Integration tests cover critical flows
 - [ ] Secrets, CORS, and environment handling are production-safe
@@ -204,6 +225,9 @@
 
 - There is currently no `course` or `usercourse` module in this repository
 - Real-time course progress/Q&A cannot be implemented here until that backend model and API surface exist
-- Billing and queue modules exist in the codebase, but they are still scaffolds rather than live product features
-- Visual styling is now much stronger across the app, but motion/animation polish is still a remaining frontend quality pass
+- Billing checkout, webhook verification, and MongoDB subscription persistence now work in local Stripe test mode
+- Premium feature gating is enforced for the AI/billing-protected product flows currently implemented
+- The calorie tracker now estimates calories on its own before diet-plan creation, switches to the active diet target afterward, and can expose workout-adjusted daily context when diet data is not present
+- Diet generation is now intentionally linked to the active workout split so nutrition structure follows training demand more closely
+- Visual styling is much stronger across the app, but broader frontend QA and test coverage are still worth expanding
 - `.env` files should remain untracked

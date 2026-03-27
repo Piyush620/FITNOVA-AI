@@ -14,6 +14,7 @@ import { DietPage } from './pages/Diet';
 import { CoachChatPage } from './pages/CoachChat';
 import { CaloriesPage } from './pages/Calories';
 import { ProfilePage } from './pages/Profile';
+import { BillingPage } from './pages/Billing';
 
 // Components
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -132,6 +133,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/billing"
+          element={
+            <ProtectedRoute>
+              <BillingPage />
             </ProtectedRoute>
           }
         />

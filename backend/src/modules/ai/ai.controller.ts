@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { Premium } from 'src/common/decorators/premium.decorator';
 import { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 
 import { AiService } from './ai.service';
@@ -27,6 +28,7 @@ export class AiController {
   }
 
   @Get('history')
+  @Premium()
   @ApiOperation({ summary: 'Get AI interaction history for the current user' })
   async getHistory(
     @CurrentUser() user: JwtPayload,
@@ -40,6 +42,7 @@ export class AiController {
   }
 
   @Post('workout-plan')
+  @Premium()
   @ApiOperation({ summary: 'Generate a personalized workout plan' })
   async generateWorkoutPlan(
     @CurrentUser() user: JwtPayload,
@@ -49,6 +52,7 @@ export class AiController {
   }
 
   @Post('diet-plan')
+  @Premium()
   @ApiOperation({ summary: 'Generate a personalized diet plan' })
   async generateDietPlan(
     @CurrentUser() user: JwtPayload,
@@ -58,6 +62,7 @@ export class AiController {
   }
 
   @Post('workout-plan/save')
+  @Premium()
   @ApiOperation({ summary: 'Generate a structured AI workout plan and save it into workout plans' })
   async generateAndSaveWorkoutPlan(
     @CurrentUser() user: JwtPayload,
@@ -67,6 +72,7 @@ export class AiController {
   }
 
   @Post('diet-plan/save')
+  @Premium()
   @ApiOperation({ summary: 'Generate a structured AI diet plan and save it into diet plans' })
   async generateAndSaveDietPlan(
     @CurrentUser() user: JwtPayload,
@@ -76,6 +82,7 @@ export class AiController {
   }
 
   @Post('coach-chat')
+  @Premium()
   @ApiOperation({ summary: 'Chat with the AI fitness coach' })
   async coachChat(
     @CurrentUser() user: JwtPayload,
@@ -85,6 +92,7 @@ export class AiController {
   }
 
   @Post('calorie-estimate')
+  @Premium()
   @ApiOperation({ summary: 'Estimate calories and macros from a natural-language food log' })
   async estimateCalorieLog(
     @CurrentUser() user: JwtPayload,
@@ -94,6 +102,7 @@ export class AiController {
   }
 
   @Post('adaptive-plan')
+  @Premium()
   @ApiOperation({ summary: 'Generate adaptive weekly guidance based on workouts, diet, and progress history' })
   async adaptivePlan(
     @CurrentUser() user: JwtPayload,
@@ -103,6 +112,7 @@ export class AiController {
   }
 
   @Post('calorie-insights')
+  @Premium()
   @ApiOperation({ summary: 'Generate AI calorie insights from monthly calorie logs and user context' })
   async generateCalorieInsights(
     @CurrentUser() user: JwtPayload,
@@ -112,6 +122,7 @@ export class AiController {
   }
 
   @Post('queue')
+  @Premium()
   @ApiOperation({ summary: 'Queue a background plan generation job' })
   async queuePlanJob(
     @CurrentUser() user: JwtPayload,
