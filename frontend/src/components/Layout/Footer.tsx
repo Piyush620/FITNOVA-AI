@@ -4,43 +4,47 @@ export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-16 border-t border-[#2e303a] bg-[#0B0B0B]">
+    <footer className="relative mt-16 overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,rgba(12,14,24,0.94)_0%,rgba(10,12,20,0.98)_100%)]">
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute left-10 top-0 h-40 w-40 rounded-full bg-[#8ef7c7]/10 blur-3xl" />
+        <div className="absolute right-10 top-8 h-36 w-36 rounded-full bg-[#ffb5d3]/10 blur-3xl" />
+      </div>
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-[#F7F7F7]">FitNova AI</h3>
-            <p className="text-sm text-gray-400">AI-powered fitness coaching platform</p>
+            <h3 className="bg-[linear-gradient(90deg,#ffffff_0%,#dff8ee_35%,#ffe4f1_100%)] bg-clip-text text-xl font-bold text-transparent">FitNova AI</h3>
+            <p className="text-sm text-gray-400">AI-powered fitness coaching with a richer, more cinematic command-center feel.</p>
           </div>
 
           <div>
             <h4 className="mb-4 font-semibold text-[#F7F7F7]">Product</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><a href="#" className="transition-colors hover:text-white">Features</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Pricing</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Blog</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#8ef7c7]">Features</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#ffb5d3]">Pricing</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#cab8ff]">Blog</a></li>
             </ul>
           </div>
 
           <div>
             <h4 className="mb-4 font-semibold text-[#F7F7F7]">Company</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><a href="#" className="transition-colors hover:text-white">About</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Contact</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Careers</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#8ef7c7]">About</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#ffb5d3]">Contact</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#cab8ff]">Careers</a></li>
             </ul>
           </div>
 
           <div>
             <h4 className="mb-4 font-semibold text-[#F7F7F7]">Legal</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li><a href="#" className="transition-colors hover:text-white">Privacy</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Terms</a></li>
-              <li><a href="#" className="transition-colors hover:text-white">Disclaimer</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#8ef7c7]">Privacy</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#ffb5d3]">Terms</a></li>
+              <li><a href="#" className="transition-colors hover:text-[#cab8ff]">Disclaimer</a></li>
             </ul>
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-between border-t border-[#2e303a] pt-8 md:flex-row">
+        <div className="flex flex-col items-center justify-between border-t border-white/10 pt-8 md:flex-row">
           <p className="text-sm text-gray-500">Copyright {currentYear} FitNova AI. All rights reserved.</p>
           <div className="mt-4 flex gap-6 md:mt-0">
             <a href="#" className="text-gray-500 transition-colors hover:text-white">

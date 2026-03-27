@@ -7,6 +7,8 @@ export enum AiInteractionType {
   WORKOUT_PLAN = 'workout-plan',
   DIET_PLAN = 'diet-plan',
   COACH_CHAT = 'coach-chat',
+  CALORIE_INSIGHTS = 'calorie-insights',
+  CALORIE_ESTIMATE = 'calorie-estimate',
 }
 
 @Schema({ timestamps: true, collection: 'ai_interactions' })

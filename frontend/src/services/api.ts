@@ -6,8 +6,13 @@ import type {
   RegisterPayload,
   WorkoutPlan,
   DietPlan,
+  CalorieLog,
+  DailyCalorieLogResponse,
+  MonthlyCalorieSummary,
   ProgressCheckIn,
   AiInteraction,
+  CalorieInsightsResponse,
+  CalorieEstimateResponse,
   DashboardSummary,
   GenerateWorkoutPlanPayload,
   GenerateDietPlanPayload,
@@ -59,6 +64,25 @@ type RetryableRequestConfig = {
   headers?: {
     Authorization?: string;
   };
+};
+
+type CalorieLogPayload = {
+  loggedDate: string;
+  mealType: CalorieLog['mealType'];
+  title: string;
+  source?: 'manual' | 'ai';
+  rawInput?: string | null;
+  calories: number;
+  proteinGrams?: number | null;
+  carbsGrams?: number | null;
+  fatsGrams?: number | null;
+  notes?: string | null;
+  confidence?: number | null;
+  parsedItems?: Array<{
+    name: string;
+    quantity?: string;
+    estimatedCalories?: number;
+  }> | null;
 };
 
 export const getApiErrorMessage = (message?: string | string[]) => {
@@ -178,6 +202,23 @@ export const dietAPI = {
     apiClient.post<DietPlan>(`/diet/plans/${planId}/days/${dayNumber}/meals/${mealType}/complete`, {}),
 };
 
+export const caloriesAPI = {
+  createLog: (payload: CalorieLogPayload) =>
+    apiClient.post<CalorieLog>('/calorie-logs', payload),
+
+  updateLog: (logId: string, payload: Partial<CalorieLogPayload>) =>
+    apiClient.patch<CalorieLog>(`/calorie-logs/${logId}`, payload),
+
+  deleteLog: (logId: string) =>
+    apiClient.delete<{ deleted: boolean; id: string }>(`/calorie-logs/${logId}`),
+
+  getDaily: (date?: string) =>
+    apiClient.get<DailyCalorieLogResponse>('/calorie-logs/daily', { params: { date } }),
+
+  getMonthlySummary: (month?: string) =>
+    apiClient.get<MonthlyCalorieSummary>('/calorie-logs/monthly-summary', { params: { month } }),
+};
+
 export const progressAPI = {
   logCheckIn: (payload: Omit<ProgressCheckIn, 'id' | 'userId' | 'createdAt'>) =>
     apiClient.post<ProgressCheckIn>('/progress', payload),
@@ -189,8 +230,14 @@ export const progressAPI = {
 export const aiAPI = {
   getStatus: () => apiClient.get<AiStatusResponse>('/ai/status'),
 
-  getHistory: (page = 1, limit = 20) =>
-    apiClient.get<PaginatedResponse<AiInteraction>>('/ai/history', { params: { page, limit } }),
+  getHistory: (
+    page = 1,
+    limit = 20,
+    type?: AiInteraction['type']
+  ) =>
+    apiClient.get<PaginatedResponse<AiInteraction>>('/ai/history', {
+      params: { page, limit, type },
+    }),
 
   generateWorkoutPlan: (payload: GenerateWorkoutPlanPayload) =>
     apiClient.post<AiGenerationResponse>('/ai/workout-plan', payload),
@@ -208,6 +255,12 @@ export const aiAPI = {
 
   getAdaptivePlan: (focusArea?: string) =>
     apiClient.post<AiGenerationResponse>('/ai/adaptive-plan', { focusArea }),
+
+  getCalorieInsights: (month?: string) =>
+    apiClient.post<CalorieInsightsResponse>('/ai/calorie-insights', { month }),
+
+  estimateCalorieLog: (payload: { loggedDate: string; mealType: CalorieLog['mealType']; rawInput: string }) =>
+    apiClient.post<CalorieEstimateResponse>('/ai/calorie-estimate', payload),
 };
 
 export default apiClient;

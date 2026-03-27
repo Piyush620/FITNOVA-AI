@@ -42,11 +42,11 @@ export const Select: React.FC<SelectProps> = ({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full rounded-lg border ${
+        className={`w-full rounded-[1rem] border ${
           error
-            ? 'border-[#FF6B00] focus:border-[#FF6B00] focus:ring-[#FF6B00]'
-            : 'border-[#2e303a] focus:border-[#00FF88] focus:ring-[#00FF88]'
-        } bg-[#1a1a2e] px-4 py-2.5 text-[#F7F7F7] transition-all focus:outline-none focus:ring-1 ${
+            ? 'border-[#ff8fbe] focus:border-[#ff8fbe] focus:ring-[#ff8fbe]/30'
+            : 'border-white/10 focus:border-[#8ef7c7]/55 focus:ring-[#cab8ff]/25'
+        } bg-[linear-gradient(180deg,rgba(26,29,49,0.96)_0%,rgba(17,20,35,0.96)_100%)] px-4 py-3 text-[#F7F7F7] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-300 focus:outline-none focus:ring-2 ${
           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
         } ${className}`}
       >

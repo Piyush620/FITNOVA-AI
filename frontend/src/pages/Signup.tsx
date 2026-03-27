@@ -192,22 +192,20 @@ export const SignupPage: React.FC = () => {
                 onChange={handleChange}
               />
 
-              <div className="w-full space-y-2">
-                <label className="block text-sm font-medium text-[#F7F7F7]">Activity Level</label>
-                <select
-                  name="activityLevel"
-                  value={formData.activityLevel}
-                  onChange={(e) =>
-                    setFormData((current) => ({ ...current, activityLevel: e.target.value }))
-                  }
-                  className="flex h-11 w-full rounded-xl border border-[#2e303a] bg-[#11131d] px-4 py-2.5 text-[#F7F7F7] transition-colors duration-200 focus:border-[#00FF88] focus:outline-none focus:ring-2 focus:ring-[#00FF88]/20"
-                >
-                  <option value="light">Light</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="active">Active</option>
-                  <option value="athlete">Athlete</option>
-                </select>
-              </div>
+              <Select
+                label="Activity Level"
+                name="activityLevel"
+                value={formData.activityLevel}
+                onChange={(e) =>
+                  setFormData((current) => ({ ...current, activityLevel: e.target.value }))
+                }
+                options={[
+                  { value: 'light', label: 'Light' },
+                  { value: 'moderate', label: 'Moderate' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'athlete', label: 'Athlete' },
+                ]}
+              />
 
               <Input
                 label="Password"

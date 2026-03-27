@@ -79,6 +79,7 @@ export const DashboardPage: React.FC = () => {
   const mealCompletionRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 100) : 0;
   const weightChange = dashboard?.progressSummary.weightChangeKg ?? null;
   const firstName = user?.profile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Athlete';
+  const remainingCalories = dashboard?.remainingCalories ?? 0;
 
   return (
     <MainLayout>
@@ -130,7 +131,7 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden p-0">
+            <Card className="overflow-hidden border-white/10 p-0">
               <div className="relative min-h-full">
                 <img
                   src={user?.profile?.avatarUrl || heroImage}
@@ -155,19 +156,38 @@ export const DashboardPage: React.FC = () => {
                         <p className="text-sm text-[#cbd1de]">Workouts completed</p>
                         <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard?.completedWorkoutsThisWeek ?? 0}</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Meals checked off</p>
-                        <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{completedMeals}</p>
+                      <div className="rounded-2xl border border-[#00FF88]/20 bg-[radial-gradient(circle_at_top,rgba(0,255,136,0.16),transparent_65%),rgba(0,0,0,0.38)] p-4 backdrop-blur">
+                        <p className="text-sm text-[#cbd1de]">Today&apos;s calories</p>
+                        <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard?.todaysCalories ?? 0}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#8ff6c1]">
+                          Target {dashboard?.caloriesTarget ?? 0} kcal
+                        </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
                         <p className="text-sm text-[#cbd1de]">Goal</p>
                         <p className="mt-2 text-lg font-semibold capitalize text-[#F7F7F7]">{dashboard?.goal ?? 'General fitness'}</p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Next check-in</p>
-                        <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
-                          {dashboard?.nextCheckIn ? new Date(dashboard.nextCheckIn).toLocaleDateString() : 'N/A'}
+                        <p className="text-sm text-[#cbd1de]">Calories left</p>
+                        <p className={`mt-2 text-lg font-semibold ${remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
+                          {dashboard ? `${remainingCalories}` : 'N/A'}
                         </p>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-[linear-gradient(90deg,#00FF88_0%,#c4ffd8_100%)]"
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.max(
+                                  0,
+                                  dashboard && dashboard.caloriesTarget > 0
+                                    ? (dashboard.todaysCalories / dashboard.caloriesTarget) * 100
+                                    : 0,
+                                ),
+                              )}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -177,8 +197,8 @@ export const DashboardPage: React.FC = () => {
                       <Button fullWidth variant="secondary" onClick={() => navigate('/diet')}>
                         View Diet Plans
                       </Button>
-                      <Button fullWidth variant="secondary" onClick={() => navigate('/profile')}>
-                        Edit Profile
+                      <Button fullWidth variant="secondary" onClick={() => navigate('/calories')}>
+                        Log Calories
                       </Button>
                     </div>
                   </div>
@@ -278,7 +298,7 @@ export const DashboardPage: React.FC = () => {
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
               <Card className="space-y-2">
                 <p className="text-sm text-gray-400">Goal</p>
                 <p className="text-xl font-semibold capitalize text-[#F7F7F7]">{dashboard.goal}</p>
@@ -293,18 +313,74 @@ export const DashboardPage: React.FC = () => {
                   {new Date(dashboard.nextCheckIn).toLocaleDateString()}
                 </p>
               </Card>
+              <Card className="space-y-2">
+                <p className="text-sm text-gray-400">Avg logged calories</p>
+                <p className="text-xl font-semibold text-[#F7F7F7]">
+                  {dashboard.monthlyAverageCalories} kcal
+                </p>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">
+                  {dashboard.monthlyLoggedDays} days tracked
+                </p>
+              </Card>
             </div>
+
+            <Card variant="gradient" className="overflow-hidden p-0">
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.12),transparent_24%)]" />
+                <div className="relative flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between lg:p-7">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
+                    Calorie Tracking
+                  </p>
+                  <h2 className="text-2xl font-bold text-[#F7F7F7]">
+                    Stay on top of real intake, not just the plan.
+                  </h2>
+                  <p className="max-w-2xl text-sm leading-7 text-[#98a3b8]">
+                    You&apos;ve logged {dashboard.monthlyLoggedDays} days this month with an average of{' '}
+                    {dashboard.monthlyAverageCalories} kcal on logged days. Use the tracker to tighten consistency and catch drift faster.
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                    <p className="text-sm text-gray-400">Target</p>
+                    <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard.caloriesTarget}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                    <p className="text-sm text-gray-400">Today</p>
+                    <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard.todaysCalories}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                    <p className="text-sm text-gray-400">Remaining</p>
+                    <p className={`mt-2 text-2xl font-bold ${dashboard.remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
+                      {dashboard.remainingCalories}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="relative flex items-center justify-between border-t border-white/10 px-6 py-4 lg:px-7">
+                <p className="text-sm text-[#9da8bf]">
+                  Daily intake is now part of your core progress loop.
+                </p>
+                <Button variant="accent" onClick={() => navigate('/calories')}>
+                  Open Calorie Tracker
+                </Button>
+              </div>
+              </div>
+            </Card>
           </>
         ) : null}
 
         <div>
           <h2 className="mb-4 text-2xl font-bold text-[#F7F7F7]">Quick Actions</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Button fullWidth variant="secondary" onClick={() => navigate('/workouts')}>
               View Workouts
             </Button>
             <Button fullWidth variant="secondary" onClick={() => navigate('/diet')}>
               View Diet Plans
+            </Button>
+            <Button fullWidth variant="secondary" onClick={() => navigate('/calories')}>
+              Track Calories
             </Button>
             <Button fullWidth variant="secondary" onClick={() => navigate('/coach')}>
               AI Coach Chat

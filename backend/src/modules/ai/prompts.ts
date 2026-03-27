@@ -35,9 +35,16 @@ gender: ${profile?.gender ?? 'not provided'}
 Calculate a realistic daily calorie target and macro split based on the weight-change timeline.
 Return breakfast, lunch, dinner, snacks, hydration, and macro notes with Indian food suggestions matched to the selected cuisine region.`;
 
-export const coachPrompt = (userData: Record<string, unknown>, message: string) =>
+export const coachPrompt = (
+  userData: Record<string, unknown>,
+  message: string,
+  recentContext?: string,
+) =>
   `Act as a professional fitness coach and guide the user based on:
 ${JSON.stringify(userData, null, 2)}
+
+Recent conversation context:
+${recentContext || 'No prior coach messages.'}
 
 User message:
 ${message}
@@ -151,3 +158,48 @@ Constraints:
 - use a targetCalories value between 1200 and 4000
 - no markdown fences
 - no prose outside JSON`;
+
+export const structuredCalorieEstimatePrompt = (
+  input: {
+    loggedDate: string;
+    mealType: string;
+    rawInput: string;
+  },
+  profile?: AiProfileContext,
+) =>
+  `Estimate nutrition for this food log:
+date: ${input.loggedDate}
+meal type: ${input.mealType}
+user input: ${input.rawInput}
+goal: ${profile?.goal ?? 'not provided'}
+activity level: ${profile?.activityLevel ?? 'not provided'}
+gender: ${profile?.gender ?? 'not provided'}
+
+Return ONLY valid JSON with this shape:
+{
+  "title": "short readable meal title",
+  "mealType": "breakfast | mid-morning | lunch | evening-snack | dinner | post-workout | other",
+  "rawInput": "original user text",
+  "confidence": 0.78,
+  "calories": 620,
+  "proteinGrams": 28,
+  "carbsGrams": 72,
+  "fatsGrams": 18,
+  "notes": "brief estimation note",
+  "parsedItems": [
+    {
+      "name": "string",
+      "quantity": "string",
+      "estimatedCalories": 220
+    }
+  ]
+}
+
+Constraints:
+- no markdown fences
+- no prose outside JSON
+- calories must be between 0 and 4000
+- proteinGrams, carbsGrams, fatsGrams must be between 0 and 400
+- confidence must be between 0 and 1
+- parsedItems must contain at least 1 item
+- keep notes concise and estimation-focused`;

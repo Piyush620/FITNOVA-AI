@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { CalorieLogsModule } from '../calorie-logs/calorie-logs.module';
 import { QueueModule } from '../queue/queue.module';
 import { UsersModule } from '../users/users.module';
 import {
@@ -24,6 +25,7 @@ import { AiInteraction, AiInteractionSchema } from './schemas/ai-interaction.sch
 @Module({
   imports: [
     UsersModule,
+    CalorieLogsModule,
     QueueModule,
     WorkoutsModule,
     DietModule,

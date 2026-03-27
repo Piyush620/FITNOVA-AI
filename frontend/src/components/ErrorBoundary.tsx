@@ -27,12 +27,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#0B0B0B] px-4">
-          <div className="max-w-md space-y-6 rounded-lg border border-[#FF6B00] bg-[#1a1a2e] p-8 text-center">
+        <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,#070710_0%,#0b0d17_100%)] px-4">
+          <div className="max-w-md space-y-6 rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(255,181,211,0.12),transparent_34%),linear-gradient(180deg,#1f1f34_0%,#151726_100%)] p-8 text-center shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
             <div className="flex justify-center">
-              <div className="rounded-full bg-[#FF6B00]/20 p-4">
+              <div className="rounded-full border border-[#ffb5d3]/30 bg-[#ffb5d3]/10 p-4">
                 <svg
-                  className="h-8 w-8 text-[#FF6B00]"
+                  className="h-8 w-8 text-[#ffb5d3]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -54,7 +54,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             </div>
             <button
               onClick={() => window.location.reload()}
-              className="w-full rounded-lg bg-[#00FF88] px-4 py-2.5 font-semibold text-[#0B0B0B] transition-all hover:bg-[#00FF88]/90 active:scale-95"
+              className="w-full rounded-[1rem] border border-white/20 bg-[linear-gradient(135deg,#fff5fb_0%,#ffe2ef_40%,#d4c9ff_100%)] px-4 py-3 font-semibold text-[#151628] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(255,181,211,0.24)] active:scale-[0.98]"
             >
               Refresh Page
             </button>

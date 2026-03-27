@@ -28,8 +28,65 @@ export const CoachChatPage: React.FC = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateHistory = async () => {
+      try {
+        const response = await aiAPI.getHistory(1, 12, 'coach-chat');
+        if (!isMounted) {
+          return;
+        }
+
+        const hydratedMessages = response.data.items
+          .slice()
+          .reverse()
+          .flatMap((interaction) => {
+            const historyMessages: ChatMessage[] = [];
+            const promptMessage = interaction.promptPayload?.message;
+
+            if (typeof promptMessage === 'string' && promptMessage.trim().length > 0) {
+              historyMessages.push({
+                id: `${interaction.id}-user`,
+                role: 'user',
+                content: promptMessage.trim(),
+              });
+            }
+
+            if (interaction.outputText.trim().length > 0) {
+              historyMessages.push({
+                id: `${interaction.id}-assistant`,
+                role: 'assistant',
+                content: interaction.outputText.trim(),
+                meta: `${interaction.provider} | ${interaction.model}`,
+              });
+            }
+
+            return historyMessages;
+          });
+
+        setMessages(hydratedMessages);
+      } catch {
+        if (isMounted) {
+          setMessages([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsHydrating(false);
+        }
+      }
+    };
+
+    void hydrateHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -180,7 +237,7 @@ export const CoachChatPage: React.FC = () => {
                 setMessages([]);
                 setError('');
               }}
-              disabled={isSending}
+              disabled={isSending || isHydrating}
               className="border-white/10 bg-white/5"
             >
               Clear Chat
@@ -189,7 +246,16 @@ export const CoachChatPage: React.FC = () => {
 
           <div className="flex min-h-[560px] flex-col">
             <div className="flex-1 space-y-5 px-5 py-6 sm:px-7">
-              {messages.length === 0 && !isSending ? (
+              {isHydrating ? (
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] px-5 py-6 sm:px-7 sm:py-8">
+                  <div className="flex items-center gap-2 text-sm text-[#aeb7cb]">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF88]"></span>
+                    Loading recent coach context...
+                  </div>
+                </div>
+              ) : null}
+
+              {messages.length === 0 && !isSending && !isHydrating ? (
                 <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.03] px-5 py-6 sm:px-7 sm:py-8">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
                     Warm start
@@ -251,7 +317,7 @@ export const CoachChatPage: React.FC = () => {
                   rows={5}
                   placeholder="Ask about your training, recovery, diet, or how to adjust the week..."
                   className="min-h-[132px] rounded-[1.5rem] border-white/10 bg-white/[0.04] px-5 py-4"
-                  disabled={isSending}
+                  disabled={isSending || isHydrating}
                 />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-[#8f97ab]">
@@ -261,7 +327,7 @@ export const CoachChatPage: React.FC = () => {
                     variant="accent"
                     size="md"
                     onClick={() => void handleSendMessage()}
-                    disabled={!message.trim()}
+                    disabled={!message.trim() || isHydrating}
                     isLoading={isSending}
                     className="self-start sm:self-auto"
                   >

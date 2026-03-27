@@ -40,6 +40,8 @@
 - [x] README refreshed to match current app capabilities
 - [x] Landing, login, dashboard, profile, workouts, and diet pages now share a stronger bold visual direction
 - [x] Image-backed hero sections are used across key frontend surfaces
+- [x] Live calorie tracking with AI food estimation, confirm-and-save flow, daily totals, monthly summaries, and recommendations
+- [x] AI structured-output guardrails and coach chat history hydration
 - [ ] Billing is still scaffold-only
 - [ ] Queue workers are still scaffold-only
 - [ ] Mobile app not started
@@ -56,6 +58,8 @@
 - [x] AI: status, history, workout generation, diet generation, coach chat, adaptive plan, queue endpoint
 - [x] AI structured save for workout plans
 - [x] AI structured save for diet plans
+- [x] AI calorie estimation endpoint for natural-language meal logging
+- [x] AI normalization/guardrails for malformed structured workout, diet, and calorie responses
 
 ### Frontend
 
@@ -64,6 +68,7 @@
 - [x] Workout plans page with pagination, activation, completion, deep-linking, and AI create/save
 - [x] Diet plans page with pagination, activation, meal completion, deep-linking, and AI create/save
 - [x] Coach chat page with live AI responses
+- [x] Coach chat history hydration from saved AI interactions
 - [x] Profile page with progress snapshot, editable user fields, and avatar upload
 - [x] Shared button, input, card, pagination, and layout refactor
 - [x] Shared textarea component in the same design system
@@ -71,6 +76,7 @@
 - [x] Landing page visual redesign and footer cleanup
 - [x] Dashboard/profile/workout/diet pages visually aligned with the newer premium art direction
 - [x] Tailwind source detection / utility generation fixed
+- [x] Live calorie tracker for AI-estimated food logging with manual fallback and daily/monthly review
 
 ## Remaining High-Priority Work
 
@@ -101,11 +107,23 @@
 
 ### 3. AI Product Layer
 
-- [ ] Test AI responses with a wider range of real payloads in Swagger and UI
-- [ ] Improve validation/guardrails for malformed AI structured output
-- [ ] Decide whether coach chat should support conversation threads or message history hydration
+- [x] Add focused backend coverage for wider malformed/edge-case AI payloads across workout, diet, calorie, and coach flows
+- [x] Improve validation/guardrails for malformed AI structured output
+- [x] Decide on coach chat message history hydration instead of conversation threads and ship it
+- [x] Generate end-of-month calorie intake recommendations based on actual logged intake vs user goal
+- [x] Add AI calorie estimation flow for natural-language food logging before saving to DB
 
-### 4. Billing
+### 4. Live Calorie Tracking
+
+- [x] Add backend calorie log module/schema for manual daily intake entries
+- [x] Add create/list/update/delete APIs for calorie log entries by date
+- [x] Add daily calorie tracker UI for AI-estimated food logging with manual fallback
+- [x] Show daily totals vs target calories with optional protein/carbs/fats tracking
+- [x] Add monthly calorie summary view with averages, trends, and goal comparison
+- [x] Connect monthly calorie review and adjustment suggestions
+- [x] Save raw food input, parsed AI items, source, and confidence alongside calorie logs
+
+### 5. Billing
 
 - [ ] Connect real Stripe SDK checkout session creation
 - [ ] Persist customers/subscriptions to PostgreSQL
@@ -113,24 +131,25 @@
 - [ ] Update subscription status from webhook events
 - [ ] Add premium feature gating in backend and frontend
 
-### 5. Queue / Async Jobs
+### 6. Queue / Async Jobs
 
 - [ ] Turn queue scaffold into real BullMQ workers
 - [ ] Add retry and failure logging
 - [ ] Decide which AI flows should be queued versus synchronous
 
-### 6. Testing and Hardening
+### 7. Testing and Hardening
 
 - [ ] Add backend integration tests for auth, users, workouts, diet, and AI
 - [x] Fix Fastify compatibility in global exception and request-logging paths
 - [x] Realign stale auth/users unit tests with current service contracts
 - [x] Add frontend smoke tests for auth and protected/profile flows
 - [ ] Expand frontend integration tests for login, profile save, workout generation, and diet generation flows
+- [x] Add backend/frontend coverage for calorie log creation, daily totals, and monthly summaries
 - [ ] Add rate limiting and security hardening
 - [ ] Improve logging and monitoring
 - [ ] Review production-safe CORS and environment handling
 
-### 7. DevOps and Docs
+### 8. DevOps and Docs
 
 - [ ] Add backend Dockerfile
 - [ ] Add `docker-compose` if local services are needed
@@ -138,11 +157,11 @@
 - [ ] Verify `.env.example` coverage and variable names
 - [ ] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
 
-### 8. Mobile
+### 9. Mobile
 
 - [ ] Create `mobile/` Expo app
 - [ ] Add auth flow
-- [ ] Add dashboard/workout/diet/coach screens
+- [ ] Add dashboard/workout/diet/coach/calorie-tracker screens
 - [ ] Add notifications once backend flows are stable
 
 ## Immediate Candidate Tasks
@@ -153,6 +172,10 @@
 - [x] Clean up older styling in dashboard/workout/diet detail views to fully match the refactored landing/auth/chat screens
 - [x] Add shared `Textarea` component in the same design system style
 - [x] Add toasts or inline success states for plan actions
+- [x] Design and build the live calorie tracker MVP flow
+- [x] Add monthly calorie insights and recommendation cards
+- [x] Replace manual-first calorie logging with AI estimate -> review -> save flow
+- [x] Add AI history filtering and hydrate coach chat from persisted coach interactions
 - [ ] Add premium motion polish to cards, page transitions, and AI coach interactions
 - [ ] Test subscriptions scaffold routes in Swagger
 - [ ] Update README screenshots or usage notes
@@ -164,6 +187,7 @@
 - [x] User can generate, save, activate, view, and progress workout plans
 - [x] User can generate, save, activate, view, and progress diet plans
 - [x] User can send and receive real coach chat messages
+- [x] User can log meals in plain language, confirm AI estimates, and review monthly calorie summaries
 - [x] Protected routes behave correctly on auth loss
 - [x] Main web flows have been manually QA tested against live backend
 

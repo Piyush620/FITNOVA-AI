@@ -2,7 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { estimateGoalCalories } from 'src/common/utils/calorie-target';
 import { User, UserDocument } from 'src/modules/auth/schemas/user.schema';
+import {
+  CalorieLog,
+  CalorieLogDocument,
+} from 'src/modules/calorie-logs/schemas/calorie-log.schema';
 import { DietPlan, DietPlanDocument } from 'src/modules/diet/schemas/diet-plan.schema';
 import {
   ProgressCheckIn,
@@ -23,6 +28,8 @@ export class UsersService {
     private readonly workoutPlanModel: Model<WorkoutPlanDocument>,
     @InjectModel(DietPlan.name)
     private readonly dietPlanModel: Model<DietPlanDocument>,
+    @InjectModel(CalorieLog.name)
+    private readonly calorieLogModel: Model<CalorieLogDocument>,
     @InjectModel(ProgressCheckIn.name)
     private readonly progressCheckInModel: Model<ProgressCheckInDocument>,
   ) {}
@@ -66,13 +73,26 @@ export class UsersService {
       throw new NotFoundException('User not found.');
     }
 
-    const [activeWorkoutPlan, activeDietPlan, allWorkoutPlans, allDietPlans, progressHistory] =
+    const today = new Date().toISOString().slice(0, 10);
+    const currentMonth = today.slice(0, 7);
+
+    const [activeWorkoutPlan, activeDietPlan, allWorkoutPlans, allDietPlans, progressHistory, todaysLogs, monthlyLogs] =
       await Promise.all([
         this.workoutPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
         this.dietPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
         this.workoutPlanModel.find({ userId: objectId }).lean(),
         this.dietPlanModel.find({ userId: objectId }).lean(),
         this.progressCheckInModel.find({ userId: objectId }).sort({ createdAt: -1 }).lean(),
+        this.calorieLogModel.find({ userId: objectId, loggedDate: today }).lean(),
+        this.calorieLogModel
+          .find({
+            userId: objectId,
+            loggedDate: {
+              $gte: `${currentMonth}-01`,
+              $lte: `${currentMonth}-31`,
+            },
+          })
+          .lean(),
       ]);
 
     const currentWeight = progressHistory[0]?.weightKg ?? user.profile.weightKg ?? null;
@@ -83,6 +103,22 @@ export class UsersService {
     const targetWeight = this.calculateTargetWeight(currentWeight, user.profile.goal);
     const workoutStats = this.calculateWorkoutStats(allWorkoutPlans);
     const dietStats = this.calculateDietStats(allDietPlans);
+    const todaysCalories = todaysLogs.reduce((sum, log) => sum + (log.calories ?? 0), 0);
+    const monthlyCalories = monthlyLogs.reduce((sum, log) => sum + (log.calories ?? 0), 0);
+    const monthlyLoggedDays = new Set(monthlyLogs.map((log) => log.loggedDate)).size;
+    const averageLoggedDayCalories =
+      monthlyLoggedDays > 0 ? Math.round(monthlyCalories / monthlyLoggedDays) : 0;
+    const calorieTarget =
+      activeDietPlan?.targetCalories ??
+      activeDietPlan?.days?.find((day) => typeof day.targetCalories === 'number')?.targetCalories ??
+      estimateGoalCalories({
+        age: user.profile.age,
+        gender: user.profile.gender,
+        heightCm: user.profile.heightCm,
+        weightKg: user.profile.weightKg,
+        activityLevel: user.profile.activityLevel,
+        goal: user.profile.goal,
+      });
 
     return {
       greeting: `Welcome back, ${user.profile.fullName.split(' ')[0]}`,
@@ -92,7 +128,11 @@ export class UsersService {
       goal: user.profile.goal ?? 'general fitness',
       activityLevel: user.profile.activityLevel ?? 'moderate',
       weeklyConsistency: this.calculateWeeklyConsistency(workoutStats.completionRate, dietStats.completionRate),
-      caloriesTarget: activeDietPlan?.targetCalories ?? 2200,
+      caloriesTarget: calorieTarget,
+      todaysCalories,
+      remainingCalories: calorieTarget - todaysCalories,
+      monthlyAverageCalories: averageLoggedDayCalories,
+      monthlyLoggedDays,
       completedWorkoutsThisWeek: workoutStats.completedDays,
       completedMeals: dietStats.completedMeals,
       totalMeals: dietStats.totalMeals,

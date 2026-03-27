@@ -12,6 +12,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { WorkoutsPage } from './pages/Workouts';
 import { DietPage } from './pages/Diet';
 import { CoachChatPage } from './pages/CoachChat';
+import { CaloriesPage } from './pages/Calories';
 import { ProfilePage } from './pages/Profile';
 
 // Components
@@ -51,8 +52,16 @@ function App() {
           reverseOrder={false}
           gutter={8}
           toastOptions={{
-            // Default options
             duration: 3000,
+            style: {
+              background:
+                'linear-gradient(180deg, rgba(24,26,42,0.96) 0%, rgba(16,18,31,0.98) 100%)',
+              color: '#f7f7f7',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '18px',
+              boxShadow: '0 18px 40px rgba(0,0,0,0.28)',
+              backdropFilter: 'blur(16px)',
+            },
           }}
         />
         <Routes>
@@ -99,6 +108,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DietPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calories"
+          element={
+            <ProtectedRoute>
+              <CaloriesPage />
             </ProtectedRoute>
           }
         />

@@ -3,6 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { User, UserSchema } from 'src/modules/auth/schemas/user.schema';
 import {
+  CalorieLog,
+  CalorieLogSchema,
+} from 'src/modules/calorie-logs/schemas/calorie-log.schema';
+import {
   DietPlan,
   DietPlanSchema,
 } from 'src/modules/diet/schemas/diet-plan.schema';
@@ -24,6 +28,7 @@ import { UsersService } from './users.service';
       { name: User.name, schema: UserSchema },
       { name: WorkoutPlan.name, schema: WorkoutPlanSchema },
       { name: DietPlan.name, schema: DietPlanSchema },
+      { name: CalorieLog.name, schema: CalorieLogSchema },
       { name: ProgressCheckIn.name, schema: ProgressCheckInSchema },
     ]),
   ],

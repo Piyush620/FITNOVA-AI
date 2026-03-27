@@ -101,6 +101,71 @@ export interface DietPlan {
   updatedAt: string;
 }
 
+export interface CalorieLog {
+  id: string;
+  userId: string;
+  loggedDate: string;
+  mealType:
+    | 'breakfast'
+    | 'mid-morning'
+    | 'lunch'
+    | 'evening-snack'
+    | 'dinner'
+    | 'post-workout'
+    | 'other';
+  title: string;
+  source?: 'manual' | 'ai';
+  rawInput?: string;
+  calories: number;
+  proteinGrams?: number;
+  carbsGrams?: number;
+  fatsGrams?: number;
+  notes?: string;
+  confidence?: number;
+  parsedItems?: Array<{
+    name: string;
+    quantity?: string;
+    estimatedCalories?: number;
+  }>;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface DailyCalorieLogResponse {
+  date: string;
+  targetCalories: number;
+  totals: {
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatsGrams: number;
+  };
+  entries: CalorieLog[];
+}
+
+export interface MonthlyCalorieSummary {
+  month: string;
+  targetCalories: number;
+  totalCalories: number;
+  averageDailyCalories: number;
+  averageLoggedDayCalories: number;
+  averageProteinGrams: number;
+  averageCarbsGrams: number;
+  averageFatsGrams: number;
+  daysLogged: number;
+  daysInMonth: number;
+  entriesCount: number;
+  dailyBreakdown: Array<{
+    date: string;
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatsGrams: number;
+    entryCount: number;
+  }>;
+  recommendations: string[];
+}
+
 export interface DietDay {
   dayNumber: number;
   dayLabel: string;
@@ -134,12 +199,53 @@ export interface ProgressCheckIn {
 
 export interface AiInteraction {
   id: string;
-  type: 'WORKOUT_PLAN' | 'DIET_PLAN' | 'COACH_CHAT';
+  type:
+    | 'workout-plan'
+    | 'diet-plan'
+    | 'coach-chat'
+    | 'calorie-insights'
+    | 'calorie-estimate';
   provider: 'gemini' | 'openai';
   model: string;
   promptPayload: Record<string, unknown>;
   outputText: string;
   createdAt: string;
+}
+
+export interface CalorieInsightsResponse {
+  type: 'calorie-insights';
+  provider: 'gemini' | 'openai';
+  model: string;
+  month: string;
+  content: string;
+  generatedAt: string;
+}
+
+export interface CalorieEstimate {
+  loggedDate: string;
+  mealType: CalorieLog['mealType'];
+  title: string;
+  source: 'ai';
+  rawInput: string;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatsGrams: number;
+  notes?: string;
+  confidence: number;
+  parsedItems: Array<{
+    name: string;
+    quantity?: string;
+    estimatedCalories?: number;
+  }>;
+}
+
+export interface CalorieEstimateResponse {
+  type: 'calorie-estimate';
+  provider: 'gemini' | 'openai';
+  model: string;
+  estimate: CalorieEstimate;
+  generatedAt: string;
 }
 
 export interface DashboardSummary {
@@ -151,6 +257,10 @@ export interface DashboardSummary {
   activityLevel: string;
   weeklyConsistency: number;
   caloriesTarget: number;
+  todaysCalories: number;
+  remainingCalories: number;
+  monthlyAverageCalories: number;
+  monthlyLoggedDays: number;
   completedWorkoutsThisWeek: number;
   completedMeals: number;
   totalMeals: number;
