@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { estimateGoalCalories } from 'src/common/utils/calorie-target';
+import { resolveGoalCalorieTarget } from 'src/common/utils/calorie-target';
 import { User, UserDocument } from 'src/modules/auth/schemas/user.schema';
 import { DietPlan, DietPlanDocument } from 'src/modules/diet/schemas/diet-plan.schema';
 
@@ -249,18 +249,17 @@ export class CalorieLogsService {
       activeDietPlan?.targetCalories ??
       activeDietPlan?.days?.find((day) => typeof day.targetCalories === 'number')?.targetCalories;
 
-    if (typeof dietTarget === 'number') {
-      return dietTarget;
-    }
-
-    return estimateGoalCalories({
+    return resolveGoalCalorieTarget(
+      {
       age: user?.profile?.age,
       gender: user?.profile?.gender,
       heightCm: user?.profile?.heightCm,
       weightKg: user?.profile?.weightKg,
       activityLevel: user?.profile?.activityLevel,
       goal: user?.profile?.goal,
-    });
+      },
+      dietTarget,
+    );
   }
 
   private buildRecommendations(input: {

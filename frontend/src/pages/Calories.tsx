@@ -3,8 +3,10 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Button, Card, Input, Select, Textarea } from '../components/Common';
+import { useAuth } from '../hooks/useAuth';
 import { aiAPI, caloriesAPI, getApiErrorMessage } from '../services/api';
 import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, MonthlyCalorieSummary } from '../types';
+import { estimateGoalCalories, resolveGoalCalorieTarget } from '../utils/calorieTarget';
 import { toastError, toastSuccess } from '../utils/toast';
 
 type ApiErrorResponse = { message?: string | string[] };
@@ -20,6 +22,10 @@ const formatMealLabel = (value: CalorieLog['mealType']) => value.split('-').map(
 
 export const CaloriesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const normalizedGoal = user?.profile?.goal?.toLowerCase() ?? '';
+  const shouldForceGoalEstimate =
+    normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut');
   const [mode, setMode] = useState<LogMode>('ai');
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedMonth, setSelectedMonth] = useState(monthNow);
@@ -38,7 +44,24 @@ export const CaloriesPage: React.FC = () => {
   useEffect(() => { void (async () => { try { setDailyData((await caloriesAPI.getDaily(selectedDate)).data); setError(''); } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; setError(nextError || 'Failed to load daily calorie logs.'); } })(); }, [selectedDate]);
   useEffect(() => { void (async () => { try { setMonthlySummary((await caloriesAPI.getMonthlySummary(selectedMonth)).data); } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; setError(nextError || 'Failed to load monthly calorie summary.'); } })(); }, [selectedMonth]);
 
-  const remainingCalories = useMemo(() => dailyData ? dailyData.targetCalories - dailyData.totals.calories : 0, [dailyData]);
+  const displayTargetCalories = useMemo(
+    () =>
+      shouldForceGoalEstimate
+        ? estimateGoalCalories(user?.profile)
+        : resolveGoalCalorieTarget(user?.profile, dailyData?.targetCalories),
+    [dailyData?.targetCalories, shouldForceGoalEstimate, user?.profile],
+  );
+  const displayMonthlyTargetCalories = useMemo(
+    () =>
+      shouldForceGoalEstimate
+        ? estimateGoalCalories(user?.profile)
+        : resolveGoalCalorieTarget(user?.profile, monthlySummary?.targetCalories),
+    [monthlySummary?.targetCalories, shouldForceGoalEstimate, user?.profile],
+  );
+  const remainingCalories = useMemo(
+    () => (dailyData ? displayTargetCalories - dailyData.totals.calories : 0),
+    [dailyData, displayTargetCalories],
+  );
   const refreshData = async (date = selectedDate, month = selectedMonth) => {
     const [dailyResponse, monthlyResponse] = await Promise.all([caloriesAPI.getDaily(date), caloriesAPI.getMonthlySummary(month)]);
     setDailyData(dailyResponse.data); setMonthlySummary(monthlyResponse.data); setError('');
@@ -103,7 +126,7 @@ export const CaloriesPage: React.FC = () => {
               <Breadcrumbs items={[{ label: 'Dashboard', onClick: () => navigate('/dashboard') }, { label: 'Calories', isCurrent: true }]} />
               <div className="space-y-3"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">AI Food Logging</p><h1 className="text-[2rem] font-black leading-[0.95] text-[#F7F7F7] sm:text-[2.6rem] lg:text-[3.2rem]">Describe the meal.<span className="block text-[#a5afc5]">Let AI estimate the numbers.</span></h1><p className="max-w-2xl text-sm leading-7 text-[#a5afc5] sm:text-base">Most people know what they ate, not the calories. Log food in plain language, review the AI estimate, then save it into your tracker.</p></div>
             </div>
-            <div className="relative grid grid-cols-2 gap-3">{[['Today', `${dailyData?.totals.calories ?? 0}`], ['Remaining', dailyData ? `${remainingCalories}` : '--'], ['Month total', `${monthlySummary?.totalCalories ?? 0}`], ['Avg day', `${monthlySummary?.averageLoggedDayCalories ?? 0}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-black/20 p-4"><p className="text-sm text-[#8f97ab]">{label}</p><p className={`text-2xl font-bold sm:text-3xl ${label === 'Remaining' && remainingCalories < 0 ? 'text-[#FF6B00]' : label === 'Remaining' ? 'text-[#00FF88]' : 'text-[#F7F7F7]'}`}>{value}</p></Card>)}</div>
+            <div className="relative grid grid-cols-2 gap-3">{[['Today', `${dailyData?.totals.calories ?? 0}`], ['Remaining', dailyData ? `${remainingCalories}` : '--'], ['Goal target', `${displayTargetCalories}`], ['Avg day', `${monthlySummary?.averageLoggedDayCalories ?? 0}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-black/20 p-4"><p className="text-sm text-[#8f97ab]">{label}</p><p className={`text-2xl font-bold sm:text-3xl ${label === 'Remaining' && remainingCalories < 0 ? 'text-[#FF6B00]' : label === 'Remaining' || label === 'Goal target' ? 'text-[#00FF88]' : 'text-[#F7F7F7]'}`}>{value}</p></Card>)}</div>
           </div>
         </Card>
 
@@ -144,7 +167,7 @@ export const CaloriesPage: React.FC = () => {
 
             <Card variant="glass" className="space-y-5 rounded-[1.6rem] p-4 sm:p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Monthly review</p><h2 className="mt-1 text-xl font-bold text-[#F7F7F7] sm:text-2xl">{selectedMonth}</h2></div><Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="max-w-full sm:max-w-[220px]" /></div>
-              {monthlySummary ? <div className="space-y-5"><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Target', `${monthlySummary.targetCalories}`], ['Days logged', `${monthlySummary.daysLogged}/${monthlySummary.daysInMonth}`], ['Avg protein', `${monthlySummary.averageProteinGrams}g`], ['Entries', `${monthlySummary.entriesCount}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-[#0e1420] p-4"><p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{label}</p><p className="text-2xl font-bold text-[#F7F7F7]">{value}</p></Card>)}</div><div className="grid gap-5 lg:grid-cols-2"><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Daily breakdown</p><div className="mt-4 space-y-3">{monthlySummary.dailyBreakdown.length ? monthlySummary.dailyBreakdown.slice().reverse().slice(0, 6).map((day) => <div key={day.date} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-[#0f1320] px-4 py-3"><div><p className="font-medium text-[#F7F7F7]">{formatDateLabel(day.date)}</p><p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">{day.entryCount} entries</p></div><div className="text-right"><p className="font-semibold text-[#F7F7F7]">{day.calories} kcal</p></div></div>) : <p className="text-sm leading-7 text-[#98a3b8]">No monthly data yet.</p>}</div></div><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Recommendations</p><p className="mt-2 text-sm text-[#98a3b8]">Use built-in guidance or ask AI for a sharper read.</p></div><Button variant="secondary" size="sm" onClick={() => void handleGenerateAiInsights()} isLoading={actionState === 'ai-insights'}>AI Review</Button></div><div className="mt-4 space-y-3">{monthlySummary.recommendations.map((item) => <div key={item} className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-6 text-[#d5d9e3]">{item}</div>)}{aiInsights ? <div className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#d5d9e3]">{aiInsights}</div> : null}</div></div></div></div> : null}
+              {monthlySummary ? <div className="space-y-5"><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Target', `${displayMonthlyTargetCalories}`], ['Days logged', `${monthlySummary.daysLogged}/${monthlySummary.daysInMonth}`], ['Avg protein', `${monthlySummary.averageProteinGrams}g`], ['Entries', `${monthlySummary.entriesCount}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-[#0e1420] p-4"><p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{label}</p><p className="text-2xl font-bold text-[#F7F7F7]">{value}</p></Card>)}</div><div className="grid gap-5 lg:grid-cols-2"><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Daily breakdown</p><div className="mt-4 space-y-3">{monthlySummary.dailyBreakdown.length ? monthlySummary.dailyBreakdown.slice().reverse().slice(0, 6).map((day) => <div key={day.date} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-[#0f1320] px-4 py-3"><div><p className="font-medium text-[#F7F7F7]">{formatDateLabel(day.date)}</p><p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">{day.entryCount} entries</p></div><div className="text-right"><p className="font-semibold text-[#F7F7F7]">{day.calories} kcal</p></div></div>) : <p className="text-sm leading-7 text-[#98a3b8]">No monthly data yet.</p>}</div></div><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Recommendations</p><p className="mt-2 text-sm text-[#98a3b8]">Use built-in guidance or ask AI for a sharper read.</p></div><Button variant="secondary" size="sm" onClick={() => void handleGenerateAiInsights()} isLoading={actionState === 'ai-insights'}>AI Review</Button></div><div className="mt-4 space-y-3">{monthlySummary.recommendations.map((item) => <div key={item} className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-6 text-[#d5d9e3]">{item}</div>)}{aiInsights ? <div className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#d5d9e3]">{aiInsights}</div> : null}</div></div></div></div> : null}
             </Card>
           </div>
         </div>

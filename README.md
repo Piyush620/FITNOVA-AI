@@ -7,7 +7,7 @@
 
 <div align="center">
   <img
-    src="https://readme-typing-svg.demolab.com?font=Orbitron&size=26&duration=3200&pause=700&color=00FF88&center=true&vCenter=true&width=900&lines=Train+Smarter.+Eat+Better.+Recover+Faster.;NestJS+%2B+MongoDB+%2B+AI+Fitness+Platform.;Built+for+premium+web+and+mobile+experiences."
+    src="https://readme-typing-svg.demolab.com?font=Orbitron&size=26&duration=3200&pause=700&color=00FF88&center=true&vCenter=true&width=900&lines=Train+Smarter.+Eat+Better.+Recover+Faster.;NestJS+%2B+MongoDB+%2B+AI+fitness+platform.;Calorie+tracking+and+coach+chat+included."
     alt="FitNova AI animated heading"
   />
 </div>
@@ -17,60 +17,71 @@
   <img src="https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/Fastify-Server-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
   <img src="https://img.shields.io/badge/MongoDB-Database-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
-  <img src="https://img.shields.io/badge/Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini AI" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Status-In%20Active%20Development-00FF88?style=flat-square" alt="Status" />
-  <img src="https://img.shields.io/badge/Theme-Dark%20Modern-0B0B0B?style=flat-square" alt="Theme" />
-  <img src="https://img.shields.io/badge/Accent-FF6B00-FF6B00?style=flat-square" alt="Accent" />
+  <img src="https://img.shields.io/badge/Gemini/OpenAI-AI-4285F4?style=for-the-badge" alt="AI" />
 </p>
 
 ## Vision
 
-FitNova AI is a modern fitness SaaS platform designed to combine structured training, nutrition planning, progress tracking, and AI-powered coaching into one premium product experience.
+FitNova AI is a fitness product that combines training plans, diet plans, progress tracking, calorie logging, and AI coaching in one web app.
 
-The current repository contains both backend and frontend applications for web access, with mobile coming soon.
+This repository currently contains:
+- a working NestJS + Fastify backend
+- a working React web frontend
+- scaffolded billing and queue modules that are not live yet
+
+## What Works Today
+
+### Web app flows
+
+- Sign up, sign in, refresh session, and log out
+- View a real dashboard with workout, diet, calorie, and progress summary data
+- Generate, save, activate, view, restart, and progress workout plans
+- Generate, save, activate, view, and progress diet plans
+- Open AI coach chat with saved history hydration
+- Log meals in plain language, let AI estimate calories/macros, confirm, and save
+- Review daily calorie totals and monthly calorie summaries
+- Edit profile data and avatar details
+
+### Backend modules
+
+- `auth`
+- `users`
+- `workouts`
+- `diet`
+- `progress`
+- `calorie-logs`
+- `ai`
+- `subscriptions` scaffold
+- `queue` scaffold
+- `system`
 
 ## Current Stack
 
-**Backend:**
-- NestJS + Fastify + TypeScript
-- MongoDB Atlas (primary database)
-- PostgreSQL + Neon (subscriptions/billing)
-- Redis + BullMQ (background jobs)
-- JWT authentication with refresh tokens
-- Gemini AI integration for coaching
+### Backend
 
-**Frontend:**
-- React 19 + TypeScript
-- Vite (build tool)
-- Tailwind CSS (styling)
-- React Router v7 (routing)
-- Zustand (state management)
-- Axios (API client)
+- NestJS 11
+- Fastify
+- MongoDB / Mongoose
+- JWT auth with refresh-token flow
+- Swagger docs
+- Gemini or OpenAI provider support
 
-**Infrastructure:**
-- Stripe (payments)
-- MongoDB Atlas (NoSQL database)
-- Neon PostgreSQL (relational database)
+### Frontend
 
-## Current Backend Modules
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Router v7
+- Zustand
+- Axios
 
-- `auth`
-  JWT auth, refresh tokens, registration, login, current-user context
-- `users`
-  Profile read/update and dashboard summary endpoints
-- `workouts`
-  Workout plan creation, active plan lookup, plan activation, session completion
-- `diet`
-  Diet plan creation, active plan lookup, plan activation, meal completion
-- `ai`
-  Workout plan, diet plan, and coach chat endpoints
-- `system`
-  Root metadata and health endpoints
-- `queue`
-  Redis/BullMQ-ready queue service scaffold
+### Still scaffold-only
+
+- Stripe billing
+- PostgreSQL subscription persistence
+- Redis/BullMQ workers
+- Mobile app
 
 ## API Quick Links
 
@@ -82,40 +93,37 @@ The current repository contains both backend and frontend applications for web a
 
 ```text
 FitNova AI/
-├─ backend/                    # NestJS + Fastify backend
-│  ├─ src/
-│  │  ├─ common/              # Shared utilities, configs, decorators
-│  │  └─ modules/
-│  │     ├─ ai/               # AI coaching and plan generation
-│  │     ├─ auth/             # JWT auth + refresh tokens
-│  │     ├─ diet/             # Diet planning module
-│  │     ├─ progress/         # Progress tracking
-│  │     ├─ queue/            # Background jobs (Redis/BullMQ)
-│  │     ├─ subscriptions/     # Stripe + PostgreSQL billing
-│  │     ├─ system/           # Health & metadata
-│  │     ├─ users/            # User profiles & dashboard
-│  │     └─ workouts/         # Workout planning module
-│  ├─ database/               # Database schemas
-│  ├─ package.json
-│  └─ .env.example
-│
-├─ frontend/                   # React + TypeScript web app
-│  ├─ src/
-│  │  ├─ pages/              # Page components
-│  │  ├─ components/         # Reusable components
-│  │  ├─ services/           # API client
-│  │  ├─ stores/             # Zustand state
-│  │  ├─ hooks/              # Custom hooks
-│  │  ├─ types/              # TypeScript types
-│  │  ├─ App.tsx
-│  │  └─ main.tsx
-│  ├─ package.json
-│  ├─ vite.config.ts
-│  ├─ tailwind.config.js
-│  └─ .env.example
-│
-├─ README.md                   # This file
-└─ TODO.md                    # Project roadmap
+|-- backend/
+|   |-- src/
+|   |   |-- common/
+|   |   `-- modules/
+|   |       |-- ai/
+|   |       |-- auth/
+|   |       |-- calorie-logs/
+|   |       |-- diet/
+|   |       |-- progress/
+|   |       |-- queue/
+|   |       |-- subscriptions/
+|   |       |-- system/
+|   |       |-- users/
+|   |       `-- workouts/
+|   |-- package.json
+|   `-- .env.example
+|-- frontend/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- hooks/
+|   |   |-- pages/
+|   |   |-- services/
+|   |   |-- stores/
+|   |   |-- test/
+|   |   |-- types/
+|   |   |-- App.tsx
+|   |   `-- main.tsx
+|   |-- package.json
+|   `-- .env.example
+|-- README.md
+`-- TODO.md
 ```
 
 ## Getting Started
@@ -123,13 +131,16 @@ FitNova AI/
 ### Prerequisites
 
 - Node.js 18+
-- npm or yarn
-- MongoDB Atlas (cloud) or local MongoDB instance
-- (Optional) Neon PostgreSQL for subscriptions
-- (Optional) Redis for background jobs
-- (Optional) Gemini or OpenAI API key for AI features
+- npm
+- MongoDB Atlas or local MongoDB
+- Gemini API key or OpenAI API key for AI flows
 
-### Backend Setup
+Optional for scaffold work only:
+- PostgreSQL
+- Redis
+- Stripe keys
+
+### Backend setup
 
 ```bash
 cd backend
@@ -137,23 +148,16 @@ npm install
 npm run start:dev
 ```
 
-**Available Commands:**
+Available commands:
+
 ```bash
-npm run build          # TypeScript build with alias resolution
-npm start              # Run compiled backend
-npm run start:dev      # Development mode with watch
-npm run lint           # Fix ESLint issues
-npm test               # Run Jest tests
-npm run test:watch    # Run tests in watch mode
-npm run test:cov      # Generate coverage reports
+npm run build
+npm run start:dev
+npm run lint
+npm test
 ```
 
-**Access Points:**
-- API root: `http://localhost:4000/api/v1`
-- Swagger docs: `http://localhost:4000/api/v1/docs`
-- Health check: `http://localhost:4000/api/v1/health`
-
-### Frontend Setup
+### Frontend setup
 
 ```bash
 cd frontend
@@ -161,62 +165,54 @@ npm install
 npm run dev
 ```
 
-**Available Commands:**
+Available commands:
+
 ```bash
-npm run dev            # Start Vite dev server
-npm run build          # Production TypeScript build
-npm run lint           # Run ESLint checks
-npm run preview        # Preview production build locally
+npm run dev
+npm run build
+npm run lint
+npm run preview
 ```
 
-**Access Point:**
-- App: `http://localhost:5173`
+### Local URLs
 
-### Environment Configuration
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:4000/api/v1`
+- Swagger: `http://localhost:4000/api/v1/docs`
 
-Create `.env.local` files in both directories (or `.env`). Examples provided in `.env.example` files.
+## Environment Notes
 
-## Environment Variables
+Create `.env.local` or `.env` files in both apps.
 
-### Backend Configuration (`backend/.env`)
+### Backend
 
-**Database & Auth:**
 ```env
 MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/fitnova
+
+PORT=4000
+APP_NAME=FitNova AI
+APP_ORIGIN=http://localhost:5173,http://localhost:3000
+
 JWT_ACCESS_SECRET=your_secure_access_secret
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_SECRET=your_secure_refresh_secret
 JWT_REFRESH_TTL=30d
 BCRYPT_SALT_ROUNDS=12
-```
 
-**Application:**
-```env
-PORT=4000
-APP_NAME=FitNova AI
-APP_ORIGIN=http://localhost:3000,http://localhost:5173
-```
-
-**AI Provider (choose one):**
-```env
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
 
-# OR
+# Optional OpenAI path
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4-turbo-preview
-```
 
-**Optional - Queue & Cache (currently scaffold):**
-```env
+# Optional queue scaffold
 REDIS_ENABLED=false
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
-```
 
-**Optional - Billing (not yet wired):**
-```env
+# Optional billing scaffold
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_MONTHLY=price_...
@@ -224,197 +220,106 @@ STRIPE_PRICE_YEARLY=price_...
 POSTGRES_URL=postgresql://user:password@localhost/fitnova
 ```
 
-### Frontend Configuration (`frontend/.env`)
+### Frontend
 
 ```env
 VITE_API_URL=http://localhost:4000/api/v1
 ```
 
-## Implemented Features
+## Usage Notes
 
-**✅ Backend:**
-- Secure JWT authentication with refresh token rotation (15m access, 30d refresh)
-- User profile management and dashboard aggregation
-- Workout planning with plan activation and session tracking
-- Diet planning with meal tracking
-- Progress check-in history
-- AI-powered coaching via Gemini/OpenAI
-- Adaptive plan generation
-- Coach chat with streaming responses
-- Swagger API documentation
-- Health check and system metadata endpoints
-- Global exception handling and validation
+### Workout flow
 
-**✅ Frontend:**
-- React 19 with TypeScript strict mode
-- Protected routes with authentication guards
-- JWT token refresh interceptors
-- Persistent auth state with localStorage
-- Dashboard with aggregated user data
-- Dedicated profile page with avatar editing and progress snapshot
-- Workout plan management with pagination
-- Diet plan management with pagination
-- Workout AI generator with training-days-per-week input
-- Diet AI generator with beginner-friendly weight/timeline/cuisine inputs
-- AI-powered coaching chat
-- Responsive dark-mode Tailwind design
-- ESLint + TypeScript build pipeline
-- Vite optimized dev experience
+1. Sign up or log in
+2. Open `Workouts`
+3. Generate an AI plan
+4. Save it, activate it, and complete sessions from the detail screen
 
-## Known Limitations & Roadmap
+### Diet flow
 
-**Current Status:**
-- ✅ Main web flows have been manually runtime QA tested
-- ✅ Signup now captures age and gender and uses them in AI generation context
-- ✅ Profile editing, avatar display, plan restart, and plan delete flows are live
-- ⚠️ Billing enabled but not connected to Stripe
-- ⚠️ Background jobs scaffolded but not activated
-- ⚠️ Mobile app not started (coming post-launch)
+1. Open `Diet`
+2. Generate an AI diet plan using goal, food preference, timeline, and related inputs
+3. Save it, activate it, and mark meals complete from the detail screen
 
-**Priority Next Steps:**
-1. Complete remaining diet-detail and dashboard visual polish
-2. Add broader frontend integration coverage
-3. Add structured logging and error tracking
-4. Add rate limiting and security hardening
-5. Activate background job workers
-6. Wire Stripe checkout and PostgreSQL billing
-7. Add comprehensive backend integration coverage
+### AI coach flow
 
-Full roadmap in [TODO.md](./TODO.md)
+1. Open `AI Coach`
+2. Ask a focused training, recovery, or diet question
+3. Coach responses are stored and recent history is hydrated back into the page
 
-## Design Direction
+### Calorie tracker flow
 
-- Background: `#0B0B0B`
-- Primary: `#00FF88`
-- Accent: `#FF6B00`
-- Tone: premium, athletic, startup-grade
+1. Open `Calories`
+2. Describe what you ate in plain language
+3. Let AI estimate calories and macros
+4. Review the estimate
+5. Save the entry
+6. Check daily totals and monthly review cards
 
-## Development & Testing
+Manual calorie entry still exists as a fallback mode.
 
-### Testing
+## Testing And Verification
 
-**Backend Tests:**
+### Backend
+
 ```bash
 cd backend
-npm test              # Run all tests
-npm run test:watch   # Watch mode with coverage
-npm run test:cov     # Coverage report
+npm test
+npm run build
 ```
 
-**Frontend Tests:**
-- `ProtectedRoute` route-guard behavior
-- Header profile navigation smoke test
-- Profile page data render smoke test
-- More auth/plan integration coverage still to be added
+### Frontend
 
-### Code Quality
-
-**Backend Linting:**
-```bash
-cd backend
-npm run lint          # Run ESLint with automatic fixes
-```
-
-**Frontend Linting:**
 ```bash
 cd frontend
-npm run lint          # Run ESLint checks
+npm run lint
+npx tsc --noEmit
 ```
 
-### Type Checking
+Note:
+- In this environment, Vite-based `npm run build` and `vitest` startup can fail with a Windows `spawn EPERM` sandbox restriction.
+- That is an environment limitation, not a confirmed frontend app bug.
 
-The project uses TypeScript strict mode. Ensure all code passes type checks:
+## Current Gaps
 
-**Backend:**
-```bash
-cd backend
-npm run build         # Includes type checking
-```
+- Stripe checkout is scaffolded, not live
+- PostgreSQL subscription persistence is not implemented
+- Queue workers are scaffolded, not active
+- Backend integration coverage is still incomplete
+- Broader frontend integration coverage is still incomplete
+- Mobile app has not started
 
-**Frontend:**
-```bash
-cd frontend
-npm run build         # Includes type checking
-```
+## Development Notes
 
-## Deployment
-
-### Docker Deployment
-
-Backend includes a production-ready setup. Create a `Dockerfile` for each service:
-
-```bash
-# Backend
-docker build -t fitnova-api .
-docker run -p 4000:4000 --env-file .env fitnova-api
-
-# Frontend (static hosting)
-docker build -t fitnova-web .
-docker run -p 3000:3000 fitnova-web
-```
-
-### Environment for Production
-
-1. Use strong secrets for JWT tokens
-2. Enable HTTPS (use reverse proxy like nginx)
-3. Setup Redis for background jobs
-4. Configure database backups
-5. Enable webhook verification for Stripe
-
-## Contributing
-
-1. Follow the existing folder structure and naming conventions
-2. Use TypeScript strict mode
-3. Add tests for new features
-4. Ensure linting passes before pushing
-5. Update TODO.md if adding new work items
-
-## Security Notes
-
-- Never commit `.env` files (use `.env.example` templates)
-- Keep dependencies updated: `npm audit fix`
-- JWT secrets should be unique and strong (30+ characters)
-- CORS configured for specific origins (update in backend config)
-- Refresh tokens stored in secure cookies (production: httpOnly + Secure flags)
+- Update [TODO.md](./TODO.md) when scope changes
+- Do not commit `.env` files
+- Review Swagger docs for request/response shapes while building
+- Use MongoDB connectivity first before debugging most backend startup issues
 
 ## Troubleshooting
 
-**Backend won't start:**
-- Check MongoDB connection string
-- Verify port 4000 is available
-- Ensure all env variables are set
+### Backend won't start
 
-**Frontend can't connect to API:**
-- Check VITE_API_URL environment variable
-- Verify backend is running on port 4000
-- Check browser console for CORS errors
+- Check `MONGODB_URI`
+- Check AI provider keys
+- Verify port `4000` is free
 
-**JWT token errors:**
-- Access tokens expire after 15 minutes (normal)
-- Use refresh endpoint to get new access token
-- Clear localStorage and login again if issues persist
+### Frontend can't reach API
 
-**Missing dependencies:**
-```bash
-# Backend
-cd backend && npm install && npm install --save-dev @types/node @nestjs/testing jest
+- Check `VITE_API_URL`
+- Verify backend is running on port `4000`
+- Check CORS origin settings in backend config
 
-# Frontend
-cd frontend && npm install
-```
+### Auth problems
+
+- Access tokens expire normally
+- Refresh flow should restore the session
+- If local state is corrupted, clear stored auth state and log in again
+
+## Roadmap
+
+The active roadmap lives in [TODO.md](./TODO.md).
 
 ## License
 
-Private repository - contact team for access
-
-## Support
-
-For issues or questions:
-1. Check [TODO.md](./TODO.md) for known issues
-2. Review Swagger docs at `/api/v1/docs`
-3. Check browser console for frontend errors
-4. Review backend logs in console output
-
-## Note
-
-GitHub README files do not support true custom font installation, so the visual style here uses SVG banner assets and animated text to achieve that bold branded look while staying GitHub-compatible.
+Private repository.

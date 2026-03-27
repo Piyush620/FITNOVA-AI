@@ -176,6 +176,33 @@ describe('CalorieLogsService', () => {
 
     const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-03-27');
 
-    expect(result.targetCalories).toBe(1800);
+    expect(result.targetCalories).toBe(1750);
+  });
+
+  it('clamps an unrealistic active fat-loss target instead of trusting it directly', async () => {
+    mockCalorieLogModel.find.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mockUserModel.findById.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        profile: {
+          age: 26,
+          gender: 'male',
+          heightCm: 176,
+          weightKg: 84,
+          activityLevel: 'moderate',
+          goal: 'fat loss',
+        },
+      }),
+    });
+    mockDietPlanModel.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        targetCalories: 3325,
+      }),
+    });
+
+    const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-03-27');
+
+    expect(result.targetCalories).toBe(2300);
   });
 });

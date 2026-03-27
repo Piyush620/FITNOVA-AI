@@ -16,6 +16,7 @@ const activityMultipliers: Array<{ match: string[]; value: number }> = [
 ];
 
 const roundToNearest25 = (value: number) => Math.round(value / 25) * 25;
+const normalizeGoal = (goal?: string) => goal?.toLowerCase() ?? '';
 
 const resolveActivityMultiplier = (activityLevel?: string) => {
   const normalized = activityLevel?.toLowerCase() ?? '';
@@ -38,7 +39,7 @@ export const estimateGoalCalories = ({
   const safeHeight = heightCm && heightCm > 0 ? heightCm : 170;
   const safeAge = age && age > 0 ? age : 28;
   const normalizedGender = gender?.toLowerCase() ?? '';
-  const normalizedGoal = goal?.toLowerCase() ?? '';
+  const normalizedGoal = normalizeGoal(goal);
   const activityMultiplier = resolveActivityMultiplier(activityLevel);
 
   const bmr =
@@ -49,7 +50,8 @@ export const estimateGoalCalories = ({
   const maintenance = Math.max(1400, roundToNearest25(bmr * activityMultiplier));
 
   if (normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut')) {
-    return Math.max(1400, roundToNearest25(maintenance - 350));
+    const deficit = Math.max(400, maintenance * 0.18);
+    return Math.min(2800, Math.max(1400, roundToNearest25(maintenance - deficit)));
   }
 
   if (
@@ -61,4 +63,37 @@ export const estimateGoalCalories = ({
   }
 
   return maintenance;
+};
+
+export const resolveGoalCalorieTarget = (
+  profile: CalorieTargetInput,
+  candidateTarget?: number | null,
+) => {
+  const estimatedTarget = estimateGoalCalories(profile);
+
+  if (typeof candidateTarget !== 'number' || !Number.isFinite(candidateTarget) || candidateTarget <= 0) {
+    return estimatedTarget;
+  }
+
+  const normalizedGoal = normalizeGoal(profile.goal);
+
+  if (normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut')) {
+    const minimum = Math.max(1400, estimatedTarget - 150);
+    const maximum = Math.min(2800, estimatedTarget + 75);
+    return roundToNearest25(Math.max(minimum, Math.min(maximum, candidateTarget)));
+  }
+
+  if (
+    normalizedGoal.includes('muscle') ||
+    normalizedGoal.includes('gain') ||
+    normalizedGoal.includes('bulk')
+  ) {
+    const minimum = estimatedTarget - 125;
+    const maximum = estimatedTarget + 300;
+    return roundToNearest25(Math.max(minimum, Math.min(maximum, candidateTarget)));
+  }
+
+  const minimum = estimatedTarget - 175;
+  const maximum = estimatedTarget + 175;
+  return roundToNearest25(Math.max(minimum, Math.min(maximum, candidateTarget)));
 };

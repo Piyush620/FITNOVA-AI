@@ -153,7 +153,7 @@
 
 - [ ] Add backend Dockerfile
 - [ ] Add `docker-compose` if local services are needed
-- [ ] Update README to match the actual app status and frontend architecture
+- [x] Update README to match the actual app status and frontend architecture
 - [ ] Verify `.env.example` coverage and variable names
 - [ ] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
 
@@ -176,9 +176,9 @@
 - [x] Add monthly calorie insights and recommendation cards
 - [x] Replace manual-first calorie logging with AI estimate -> review -> save flow
 - [x] Add AI history filtering and hydrate coach chat from persisted coach interactions
-- [ ] Add premium motion polish to cards, page transitions, and AI coach interactions
-- [ ] Test subscriptions scaffold routes in Swagger
-- [ ] Update README screenshots or usage notes
+- [x] Add premium motion polish to cards, page transitions, and AI coach interactions
+- [x] Test subscriptions scaffold routes in Swagger
+- [x] Update README screenshots or usage notes
 
 ## Definition Of "Web App Ready"
 

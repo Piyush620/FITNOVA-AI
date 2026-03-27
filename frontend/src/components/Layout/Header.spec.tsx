@@ -9,6 +9,8 @@ vi.mock('../../hooks/useAuth', () => ({
 
 import { useAuth } from '../../hooks/useAuth';
 
+const mockUseAuth = vi.mocked(useAuth);
+
 const LocationDisplay = () => {
   const location = useLocation();
   return <div>{location.pathname}</div>;
@@ -20,7 +22,6 @@ describe('Header', () => {
   });
 
   it('navigates to profile when the authenticated user block is clicked', () => {
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       user: {
         email: 'vaishnavi@example.com',

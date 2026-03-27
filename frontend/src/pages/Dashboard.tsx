@@ -5,6 +5,7 @@ import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Button, Card } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage, usersAPI } from '../services/api';
+import { estimateGoalCalories, resolveGoalCalorieTarget } from '../utils/calorieTarget';
 import type { DashboardSummary } from '../types';
 import heroImage from '../assets/hero.png';
 
@@ -79,7 +80,13 @@ export const DashboardPage: React.FC = () => {
   const mealCompletionRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 100) : 0;
   const weightChange = dashboard?.progressSummary.weightChangeKg ?? null;
   const firstName = user?.profile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'Athlete';
-  const remainingCalories = dashboard?.remainingCalories ?? 0;
+  const normalizedGoal = user?.profile?.goal?.toLowerCase() ?? dashboard?.goal?.toLowerCase() ?? '';
+  const shouldForceGoalEstimate =
+    normalizedGoal.includes('fat') || normalizedGoal.includes('loss') || normalizedGoal.includes('cut');
+  const effectiveCalorieTarget = shouldForceGoalEstimate
+    ? estimateGoalCalories(user?.profile)
+    : resolveGoalCalorieTarget(user?.profile, dashboard?.caloriesTarget);
+  const remainingCalories = dashboard ? effectiveCalorieTarget - dashboard.todaysCalories : 0;
 
   return (
     <MainLayout>
@@ -160,7 +167,7 @@ export const DashboardPage: React.FC = () => {
                         <p className="text-sm text-[#cbd1de]">Today&apos;s calories</p>
                         <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard?.todaysCalories ?? 0}</p>
                         <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#8ff6c1]">
-                          Target {dashboard?.caloriesTarget ?? 0} kcal
+                          Target {effectiveCalorieTarget} kcal
                         </p>
                       </div>
                       <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
@@ -180,8 +187,8 @@ export const DashboardPage: React.FC = () => {
                                 100,
                                 Math.max(
                                   0,
-                                  dashboard && dashboard.caloriesTarget > 0
-                                    ? (dashboard.todaysCalories / dashboard.caloriesTarget) * 100
+                                  dashboard && effectiveCalorieTarget > 0
+                                    ? (dashboard.todaysCalories / effectiveCalorieTarget) * 100
                                     : 0,
                                 ),
                               )}%`,
@@ -277,7 +284,7 @@ export const DashboardPage: React.FC = () => {
                       </div>
                       <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
                         <p className="text-sm text-gray-400">Target Calories</p>
-                        <p className="mt-1 font-semibold text-[#F7F7F7]">{dashboard.caloriesTarget} kcal</p>
+                        <p className="mt-1 font-semibold text-[#F7F7F7]">{effectiveCalorieTarget} kcal</p>
                       </div>
                     </div>
                     <Button fullWidth variant="primary" onClick={() => navigate(`/diet/${dashboard.activeDietPlan!.id}`)}>
@@ -343,7 +350,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Target</p>
-                    <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard.caloriesTarget}</p>
+                    <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{effectiveCalorieTarget}</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Today</p>
@@ -351,8 +358,8 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Remaining</p>
-                    <p className={`mt-2 text-2xl font-bold ${dashboard.remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
-                      {dashboard.remainingCalories}
+                    <p className={`mt-2 text-2xl font-bold ${remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
+                      {remainingCalories}
                     </p>
                   </div>
                 </div>

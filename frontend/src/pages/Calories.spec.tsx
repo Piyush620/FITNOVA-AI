@@ -4,6 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { CaloriesPage } from './Calories';
 
+vi.mock('../hooks/useAuth', () => ({
+  useAuth: vi.fn(),
+}));
+
 vi.mock('../components/Layout', () => ({
   MainLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -31,12 +35,48 @@ vi.mock('../utils/toast', () => ({
 }));
 
 import { aiAPI, caloriesAPI } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+
+const mockUseAuth = vi.mocked(useAuth);
+const mockGetDaily = vi.mocked(caloriesAPI.getDaily);
+const mockGetMonthlySummary = vi.mocked(caloriesAPI.getMonthlySummary);
+const mockCreateLog = vi.mocked(caloriesAPI.createLog);
+const mockGetCalorieInsights = vi.mocked(aiAPI.getCalorieInsights);
 
 describe('CaloriesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 'user-1',
+        email: 'vaishnavi@example.com',
+        roles: ['user'],
+        profile: {
+          fullName: 'Vaishnavi Upadhyay',
+          goal: 'Fat loss',
+          activityLevel: 'moderate',
+          age: 24,
+          gender: 'female',
+          heightCm: 160,
+          weightKg: 58,
+        },
+        createdAt: '2026-03-01T00:00:00.000Z',
+      },
+      accessToken: 'token',
+      isLoading: false,
+      hasHydrated: true,
+      error: null,
+      isAuthenticated: true,
+      hasSession: true,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      getCurrentUser: vi.fn(),
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
+    });
 
-    (caloriesAPI.getDaily as any).mockResolvedValue({
+    mockGetDaily.mockResolvedValue({
       data: {
         date: '2026-03-27',
         targetCalories: 2200,
@@ -63,7 +103,7 @@ describe('CaloriesPage', () => {
       },
     });
 
-    (caloriesAPI.getMonthlySummary as any).mockResolvedValue({
+    mockGetMonthlySummary.mockResolvedValue({
       data: {
         month: '2026-03',
         targetCalories: 2200,
@@ -90,11 +130,11 @@ describe('CaloriesPage', () => {
       },
     });
 
-    (caloriesAPI.createLog as any).mockResolvedValue({
+    mockCreateLog.mockResolvedValue({
       data: { id: 'entry-2' },
     });
 
-    (aiAPI.getCalorieInsights as any).mockResolvedValue({
+    mockGetCalorieInsights.mockResolvedValue({
       data: {
         content: 'Your intake is drifting higher on weekends. Tighten two meals first.',
       },
@@ -109,12 +149,12 @@ describe('CaloriesPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Live Calorie Tracking')).toBeInTheDocument();
+      expect(screen.getByText('Describe the meal.')).toBeInTheDocument();
     });
 
     expect(screen.getByText('Oats bowl')).toBeInTheDocument();
     expect(screen.getByText('Keep protein steady on weekdays.')).toBeInTheDocument();
-    expect(screen.getByText('22000')).toBeInTheDocument();
+    expect(screen.getByText('1750')).toBeInTheDocument();
   });
 
   it('creates a calorie entry from the form', async () => {
@@ -125,8 +165,10 @@ describe('CaloriesPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Log a meal or snack')).toBeInTheDocument();
+      expect(screen.getByText('What did you eat?')).toBeInTheDocument();
     });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manual' }));
 
     fireEvent.change(screen.getByPlaceholderText('Paneer wrap, oats bowl, whey shake...'), {
       target: { value: 'Chicken wrap' },
@@ -135,10 +177,10 @@ describe('CaloriesPage', () => {
       target: { value: '540' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Entry' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Manual Entry' }));
 
     await waitFor(() => {
-      expect(caloriesAPI.createLog).toHaveBeenCalledWith(
+      expect(mockCreateLog).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Chicken wrap',
           calories: 540,
@@ -155,13 +197,13 @@ describe('CaloriesPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('AI Calorie Insight')).toBeInTheDocument();
+      expect(screen.getByText('Recommendations')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'AI Review' }));
 
     await waitFor(() => {
-      expect(aiAPI.getCalorieInsights).toHaveBeenCalledWith('2026-03');
+      expect(mockGetCalorieInsights).toHaveBeenCalledWith('2026-03');
     });
 
     expect(

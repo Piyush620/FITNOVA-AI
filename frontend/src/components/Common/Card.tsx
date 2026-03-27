@@ -24,12 +24,13 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        'relative rounded-[1.75rem] border p-6 shadow-[0_18px_50px_rgba(0,0,0,0.24)] transition-all duration-300 motion-safe:[animation:fadeUp_420ms_ease-out] motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_28px_64px_rgba(0,0,0,0.28)]',
+        'group page-ambient relative rounded-[1.75rem] border p-6 shadow-[0_18px_50px_rgba(0,0,0,0.24)] transition-all duration-300 motion-safe:[animation:fadeUp_420ms_ease-out] motion-safe:will-change-transform motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_28px_64px_rgba(0,0,0,0.28)]',
         variantClasses[variant],
         className
       )}
     >
       <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_24%)]" />
+      <div className="pointer-events-none absolute inset-x-[-20%] top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] opacity-0 transition-opacity duration-500 motion-safe:group-hover:opacity-100" />
       {children}
     </div>
   );

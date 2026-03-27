@@ -317,5 +317,60 @@ describe('UsersService', () => {
       expect(result.caloriesTarget).toBe(3300);
       expect(result.remainingCalories).toBe(2400);
     });
+
+    it('pulls an unrealistic active fat-loss target back toward a safer range', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const user = {
+        _id: { toString: () => userId },
+        email: 'test@example.com',
+        profile: {
+          fullName: 'Cut User',
+          age: 26,
+          gender: 'male',
+          heightCm: 176,
+          weightKg: 84,
+          goal: 'fat loss',
+          activityLevel: 'moderate',
+        },
+      };
+
+      mockUserModel.findById.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(user),
+      });
+      mockWorkoutPlanModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      mockDietPlanModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: { toString: () => 'diet-plan-id' },
+          title: 'Aggressive bulk by mistake',
+          status: 'active',
+          targetCalories: 3325,
+        }),
+      });
+      mockWorkoutPlanModel.find.mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      });
+      mockDietPlanModel.find.mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      });
+      mockProgressCheckInModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      });
+      mockCalorieLogModel.find
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValue([]),
+        })
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValue([]),
+        });
+
+      const result = await service.getDashboardSnapshot(userId);
+
+      expect(result.caloriesTarget).toBe(2300);
+      expect(result.remainingCalories).toBe(2300);
+    });
   });
 });

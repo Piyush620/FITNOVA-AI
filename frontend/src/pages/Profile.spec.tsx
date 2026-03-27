@@ -21,10 +21,12 @@ vi.mock('../services/api', async () => {
 import { useAuth } from '../hooks/useAuth';
 import { usersAPI } from '../services/api';
 
+const mockUseAuth = vi.mocked(useAuth);
+const mockGetDashboard = vi.mocked(usersAPI.getDashboard);
+
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: {
@@ -42,7 +44,7 @@ describe('ProfilePage', () => {
       getCurrentUser: vi.fn(),
     });
 
-    (usersAPI.getDashboard as any).mockResolvedValue({
+    mockGetDashboard.mockResolvedValue({
       data: {
         greeting: 'Welcome back, Vaishnavi',
         currentWeight: 58,

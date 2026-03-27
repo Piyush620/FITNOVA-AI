@@ -10,13 +10,14 @@ vi.mock('../hooks/useAuth', () => ({
 
 import { useAuth } from '../hooks/useAuth';
 
+const mockUseAuth = vi.mocked(useAuth);
+
 describe('ProtectedRoute', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should render children when user is authenticated', () => {
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       hasHydrated: true,
       hasSession: true,
@@ -37,7 +38,6 @@ describe('ProtectedRoute', () => {
   });
 
   it('should show loading state while checking authentication', () => {
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       hasHydrated: true,
       hasSession: false,
@@ -59,7 +59,6 @@ describe('ProtectedRoute', () => {
   });
 
   it('should redirect to login when user is not authenticated', () => {
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       hasHydrated: true,
       hasSession: false,
@@ -82,7 +81,6 @@ describe('ProtectedRoute', () => {
 
   it('should call getCurrentUser if not authenticated and not loading', () => {
     const mockGetCurrentUser = vi.fn();
-    const mockUseAuth = useAuth as any;
     mockUseAuth.mockReturnValue({
       hasHydrated: true,
       hasSession: true,

@@ -31,13 +31,14 @@ export const CoachChatPage: React.FC = () => {
   const [isHydrating, setIsHydrating] = useState(true);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const shouldSmoothScrollRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
 
     const hydrateHistory = async () => {
       try {
-        const response = await aiAPI.getHistory(1, 12, 'coach-chat');
+        const response = await aiAPI.getHistory(1, 6, 'coach-chat');
         if (!isMounted) {
           return;
         }
@@ -68,7 +69,6 @@ export const CoachChatPage: React.FC = () => {
 
             return historyMessages;
           });
-
         setMessages(hydratedMessages);
       } catch {
         if (isMounted) {
@@ -89,7 +89,17 @@ export const CoachChatPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!messagesEndRef.current || messages.length === 0) {
+      return;
+    }
+
+    const shouldAnimate = shouldSmoothScrollRef.current || isSending;
+    messagesEndRef.current.scrollIntoView({
+      behavior: shouldAnimate ? 'smooth' : 'auto',
+      block: 'end',
+    });
+
+    shouldSmoothScrollRef.current = true;
   }, [messages, isSending]);
 
   const handleSendMessage = async () => {
@@ -103,6 +113,7 @@ export const CoachChatPage: React.FC = () => {
     };
 
     setMessages((current) => [...current, userMessage]);
+    shouldSmoothScrollRef.current = true;
     setMessage('');
     setError('');
     setIsSending(true);
@@ -181,12 +192,13 @@ export const CoachChatPage: React.FC = () => {
                     Try one of these
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    {starterPrompts.map((prompt) => (
+                    {starterPrompts.map((prompt, index) => (
                       <button
                         key={prompt}
                         type="button"
                         onClick={() => setMessage(prompt)}
-                        className="rounded-full border border-[#2e303a] bg-[#11131d]/90 px-4 py-2.5 text-left text-sm text-[#d8dce6] transition-all duration-300 hover:border-[#00FF88]/45 hover:bg-[#141a28]"
+                        className="rounded-full border border-[#2e303a] bg-[#11131d]/90 px-4 py-2.5 text-left text-sm text-[#d8dce6] transition-all duration-300 motion-safe:[animation:fadeUp_420ms_ease-out] motion-safe:hover:-translate-y-1 motion-safe:hover:border-[#00FF88]/45 motion-safe:hover:bg-[#141a28]"
+                        style={{ animationDelay: `${index * 70}ms` }}
                       >
                         {prompt}
                       </button>
@@ -270,18 +282,19 @@ export const CoachChatPage: React.FC = () => {
                 </div>
               ) : null}
 
-              {messages.map((msg) => (
+              {messages.map((msg, index) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-full rounded-[1.6rem] px-5 py-4 sm:max-w-2xl ${
+                    className={`chat-bubble-enter max-w-full rounded-[1.6rem] px-5 py-4 sm:max-w-2xl ${
                       msg.role === 'user'
-                        ? 'bg-white text-black shadow-[0_18px_40px_rgba(255,255,255,0.08)]'
-                        : 'border border-white/10 bg-white/[0.04] text-[#F7F7F7]'
+                        ? 'bg-[linear-gradient(135deg,#fff8fd_0%,#f8ebff_42%,#dcefff_100%)] text-black shadow-[0_18px_40px_rgba(255,255,255,0.1)]'
+                        : 'border border-white/10 bg-white/[0.04] text-[#F7F7F7] shadow-[0_18px_36px_rgba(0,0,0,0.2)]'
                     }`}
+                    style={{ animationDelay: `${Math.min(index * 35, 160)}ms` }}
                   >
                     <p className="whitespace-pre-wrap text-sm leading-7 sm:text-[15px]">{msg.content}</p>
                     {msg.meta ? (
-                      <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-[#8f97ab]">
+                      <p className={`mt-3 text-[11px] uppercase tracking-[0.18em] ${msg.role === 'user' ? 'text-[#4a5162]' : 'text-[#8f97ab]'}`}>
                         {msg.meta}
                       </p>
                     ) : null}
@@ -293,7 +306,11 @@ export const CoachChatPage: React.FC = () => {
                 <div className="flex justify-start">
                   <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.04] px-5 py-4 text-[#F7F7F7]">
                     <div className="flex items-center gap-2 text-sm text-[#aeb7cb]">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-[#00FF88]"></span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="thinking-dot h-2 w-2 rounded-full bg-[#00FF88]"></span>
+                        <span className="thinking-dot h-2 w-2 rounded-full bg-[#8ef7c7]" style={{ animationDelay: '120ms' }}></span>
+                        <span className="thinking-dot h-2 w-2 rounded-full bg-[#cab8ff]" style={{ animationDelay: '240ms' }}></span>
+                      </div>
                       Coach is thinking...
                     </div>
                   </div>
