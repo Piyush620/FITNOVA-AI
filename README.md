@@ -179,6 +179,7 @@ Available commands:
 npm run dev
 npm run build
 npm run lint
+npm run test
 npm run preview
 ```
 
@@ -283,12 +284,10 @@ npm run build
 ```bash
 cd frontend
 npm run lint
+npm run test
 npx tsc --noEmit
+npm run build
 ```
-
-Note:
-- In this environment, Vite-based `npm run build` and `vitest` startup can fail with a Windows `spawn EPERM` sandbox restriction.
-- That is an environment limitation, not a confirmed frontend app bug.
 
 ## Current Gaps
 

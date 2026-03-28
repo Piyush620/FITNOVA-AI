@@ -50,8 +50,35 @@
 - [x] Diet generation now uses the active workout split to shape day calories and recovery meal structure
 - [x] Calorie tracker now returns workout-aware daily target context and source messaging
 - [x] Workout detail flow now links directly into building a matching diet
-- [ ] Queue workers are still scaffold-only
+- [x] Backend ESLint config (v9) created and linting passes
+- [x] Frontend test TypeScript errors fixed (Header, ProtectedRoute, Calories, Profile specs)
+- [x] Queue workers now process real BullMQ plan-generation jobs with retry/failure logging
 - [ ] Mobile app not started
+
+## Recently Fixed (March 28, 2026)
+
+### Build & Test Fixes
+- Created `backend/eslint.config.js` with ESLint v9 configuration - backend linting now works
+- Fixed TypeScript errors in frontend test files:
+  - **Header.spec.tsx**: Added missing User fields (id, roles, createdAt)
+  - **ProtectedRoute.spec.tsx**: Completed useAuth mock with all required methods and properties
+  - **Calories.spec.tsx**: Fixed AxiosResponse mocks with status, statusText, headers, config; Added CalorieInsightsResponse fields
+  - **Profile.spec.tsx**: Fixed User and AxiosResponse mocks to match type definitions
+- Both backend and frontend now build and lint without errors
+
+### Frontend Bug Fixes
+- **Calories.tsx**:
+  - Fixed unformatted, unreadable inline async IIFE in useEffects (lines 91-92)
+  - Added proper error handling to `refreshData()` function which was missing try-catch
+  - Reformatted `handleEstimate()` from single-line try-catch to readable multi-line format
+  - Reformatted `handleSaveEstimate()` with proper error handling and readable structure
+  - Reformatted `handleSaveManual()` with clearer control flow and error messages
+  - Fixed `handleEdit()` function - improved readability
+  - Fixed `handleDelete()` with proper error handling and variable extraction
+  - Fixed `handleGenerateAiInsights()` with better error handling
+- **CoachChat.tsx**:
+  - Fixed error message extraction to use `getApiErrorMessage()` helper instead of raw response access
+  - Added missing import for `getApiErrorMessage` function
 
 ## What Is Actually Done
 
@@ -154,18 +181,20 @@
 
 ### 6. Queue / Async Jobs
 
-- [ ] Turn queue scaffold into real BullMQ workers
-- [ ] Add retry and failure logging
-- [ ] Decide which AI flows should be queued versus synchronous
+- [x] Turn queue scaffold into real BullMQ workers
+- [x] Add retry and failure logging
+- [x] Decide which AI flows should be queued versus synchronous
 
 ### 7. Testing and Hardening
 
-- [ ] Add backend integration tests for auth, users, workouts, diet, and AI
+- [x] Add backend integration tests for auth, users, workouts, diet, and AI
 - [x] Fix Fastify compatibility in global exception and request-logging paths
 - [x] Realign stale auth/users unit tests with current service contracts
 - [x] Add frontend smoke tests for auth and protected/profile flows
-- [ ] Expand frontend integration tests for login, profile save, workout generation, and diet generation flows
+- [x] Expand frontend integration tests for login, profile save, workout generation, and diet generation flows
 - [x] Add backend/frontend coverage for calorie log creation, daily totals, and monthly summaries
+- [x] Create backend ESLint v9 configuration (eslint.config.js)
+- [x] Fix frontend test TypeScript errors in Header, ProtectedRoute, Calories, and Profile specs
 - [ ] Add rate limiting and security hardening
 - [ ] Improve logging and monitoring
 - [ ] Review production-safe CORS and environment handling
@@ -216,7 +245,7 @@
 
 - [x] Stripe billing is live, verified, and persisted in local Stripe test mode
 - [x] Billing persistence is real in MongoDB
-- [ ] Redis/BullMQ workers are real, not scaffold-only
+- [x] Redis/BullMQ workers are real, not scaffold-only
 - [ ] Integration tests cover critical flows
 - [ ] Secrets, CORS, and environment handling are production-safe
 - [ ] Logging and failure paths are observable

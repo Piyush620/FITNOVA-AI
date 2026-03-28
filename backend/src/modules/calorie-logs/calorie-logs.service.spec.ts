@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import { User } from '../auth/schemas/user.schema';
 import { DietPlan } from '../diet/schemas/diet-plan.schema';
+import { WorkoutPlan } from '../workouts/schemas/workout-plan.schema';
 import { CalorieLogsService } from './calorie-logs.service';
 import { CalorieLog } from './schemas/calorie-log.schema';
 
@@ -11,6 +12,7 @@ describe('CalorieLogsService', () => {
   let mockCalorieLogModel: any;
   let mockUserModel: any;
   let mockDietPlanModel: any;
+  let mockWorkoutPlanModel: any;
 
   beforeEach(async () => {
     mockCalorieLogModel = {
@@ -25,6 +27,11 @@ describe('CalorieLogsService', () => {
     mockDietPlanModel = {
       findOne: jest.fn(),
     };
+    mockWorkoutPlanModel = {
+      findOne: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +39,7 @@ describe('CalorieLogsService', () => {
         { provide: getModelToken(CalorieLog.name), useValue: mockCalorieLogModel },
         { provide: getModelToken(User.name), useValue: mockUserModel },
         { provide: getModelToken(DietPlan.name), useValue: mockDietPlanModel },
+        { provide: getModelToken(WorkoutPlan.name), useValue: mockWorkoutPlanModel },
       ],
     }).compile();
 

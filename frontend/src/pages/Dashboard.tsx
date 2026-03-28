@@ -150,41 +150,41 @@ export const DashboardPage: React.FC = () => {
                   className="h-full w-full object-cover"
                   onError={() => setHeroImageSrc(heroImage)}
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,6,6,0.18)_0%,rgba(6,6,6,0.52)_44%,rgba(6,6,6,0.94)_100%)]" />
+                <div className="theme-media-overlay absolute inset-0" />
                 <div className="absolute inset-0 flex flex-col gap-5 p-6">
                   <div>
-                    <div className="inline-flex rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
+                    <div className="theme-media-chip inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                       This week
                     </div>
-                    <h2 className="mt-4 text-2xl font-bold leading-tight text-[#F7F7F7]">{firstName}&apos;s momentum snapshot</h2>
-                    <p className="mt-2 max-w-sm text-sm leading-6 text-[#d8dce6]">
+                    <h2 className="theme-media-heading mt-4 text-2xl font-bold leading-tight">{firstName}&apos;s momentum snapshot</h2>
+                    <p className="theme-media-copy mt-2 max-w-sm text-sm leading-6">
                       Stay locked into the signals that matter: completed work, calorie adherence, and recovery rhythm.
                     </p>
                   </div>
 
                   <div className="mt-auto space-y-4 pt-2">
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Workouts completed</p>
-                        <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard?.completedWorkoutsThisWeek ?? 0}</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-sm">Workouts completed</p>
+                        <p className="theme-media-heading mt-2 text-2xl font-bold">{dashboard?.completedWorkoutsThisWeek ?? 0}</p>
                       </div>
-                      <div className="rounded-2xl border border-[#00FF88]/20 bg-[radial-gradient(circle_at_top,rgba(0,255,136,0.16),transparent_65%),rgba(0,0,0,0.38)] p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Today&apos;s calories</p>
-                        <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard?.todaysCalories ?? 0}</p>
-                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#8ff6c1]">
+                      <div className="theme-media-panel theme-media-panel-accent rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-sm">Today&apos;s calories</p>
+                        <p className="theme-media-heading mt-2 text-2xl font-bold">{dashboard?.todaysCalories ?? 0}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#00FF88]">
                           Target {effectiveCalorieTarget} kcal
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Goal</p>
-                        <p className="mt-2 text-lg font-semibold capitalize text-[#F7F7F7]">{dashboard?.goal ?? 'General fitness'}</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-sm">Goal</p>
+                        <p className="theme-media-heading mt-2 text-lg font-semibold capitalize">{dashboard?.goal ?? 'General fitness'}</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Calories left</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-sm">Calories left</p>
                         <p className={`mt-2 text-lg font-semibold ${remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
                           {dashboard ? `${remainingCalories}` : 'N/A'}
                         </p>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                        <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
                           <div
                             className="h-full rounded-full bg-[linear-gradient(90deg,#00FF88_0%,#c4ffd8_100%)]"
                             style={{
@@ -353,15 +353,15 @@ export const DashboardPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                  <div className="theme-subtle-panel rounded-2xl border p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Target</p>
                     <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{effectiveCalorieTarget}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                  <div className="theme-subtle-panel rounded-2xl border p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Today</p>
                     <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{dashboard.todaysCalories}</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                  <div className="theme-subtle-panel rounded-2xl border p-4 backdrop-blur">
                     <p className="text-sm text-gray-400">Remaining</p>
                     <p className={`mt-2 text-2xl font-bold ${remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
                       {remainingCalories}

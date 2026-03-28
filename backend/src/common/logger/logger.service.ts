@@ -76,13 +76,13 @@ export class Logger extends NestLogger {
     };
   }
 
-  log(message: any, ...optionalParams: any[]) {
+  log(message: unknown, ...optionalParams: unknown[]) {
     const { context, meta } = this.extractLogPayload(optionalParams);
     loggerInstance.info(String(message), { context, ...meta });
     super.log(message, context);
   }
 
-  error(message: any, ...optionalParams: any[]) {
+  error(message: unknown, ...optionalParams: unknown[]) {
     let trace: string | undefined;
     let context: string | undefined;
     const meta: Record<string, unknown> = {};
@@ -115,19 +115,19 @@ export class Logger extends NestLogger {
     );
   }
 
-  warn(message: any, ...optionalParams: any[]) {
+  warn(message: unknown, ...optionalParams: unknown[]) {
     const { context, meta } = this.extractLogPayload(optionalParams);
     loggerInstance.warn(String(message), { context, ...meta });
     super.warn(message, context);
   }
 
-  debug(message: any, ...optionalParams: any[]) {
+  debug(message: unknown, ...optionalParams: unknown[]) {
     const { context, meta } = this.extractLogPayload(optionalParams);
     loggerInstance.debug(String(message), { context, ...meta });
     super.debug(message, context);
   }
 
-  verbose(message: any, ...optionalParams: any[]) {
+  verbose(message: unknown, ...optionalParams: unknown[]) {
     const { context, meta } = this.extractLogPayload(optionalParams);
     loggerInstance.verbose(String(message), { context, ...meta });
     super.verbose(message, context);

@@ -11,7 +11,6 @@ import { LoginDto } from './dto/login.dto';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: AuthService;
 
   const mockAuthService = {
     register: jest.fn(),
@@ -44,7 +43,6 @@ describe('AuthController', () => {
     }).compile();
 
     controller = moduleRef.get(AuthController);
-    authService = moduleRef.get(AuthService);
   });
 
   afterEach(() => {
@@ -129,4 +127,3 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 });
-

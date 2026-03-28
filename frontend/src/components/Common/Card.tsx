@@ -13,12 +13,9 @@ export const Card: React.FC<CardProps> = ({
   variant = 'default',
 }) => {
   const variantClasses = {
-    default:
-      'border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_34%),linear-gradient(180deg,#17192b_0%,#101320_100%)]',
-    gradient:
-      'border-[#8ef7c7]/20 bg-[radial-gradient(circle_at_top_left,rgba(142,247,199,0.14),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,181,211,0.12),transparent_24%),linear-gradient(145deg,#1c2038_0%,#141a2d_52%,#1a1832_100%)]',
-    glass:
-      'border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.04)_100%)] backdrop-blur-xl',
+    default: 'theme-card theme-card-default',
+    gradient: 'theme-card theme-card-gradient',
+    glass: 'theme-card theme-card-glass backdrop-blur-xl',
   };
 
   return (
@@ -29,8 +26,8 @@ export const Card: React.FC<CardProps> = ({
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_24%)]" />
-      <div className="pointer-events-none absolute inset-x-[-20%] top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)] opacity-0 transition-opacity duration-500 motion-safe:group-hover:opacity-100" />
+      <div className="theme-card-highlight pointer-events-none absolute inset-0 rounded-[inherit]" />
+      <div className="theme-card-sheen pointer-events-none absolute inset-x-[-20%] top-0 h-px transition-opacity duration-500" />
       {children}
     </div>
   );

@@ -463,34 +463,34 @@ export const WorkoutsPage: React.FC = () => {
             <Card className="overflow-hidden p-0">
               <div className="relative min-h-full">
                 <img src={heroImage} alt="Workout visual" className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.58)_48%,rgba(5,5,5,0.94)_100%)]" />
+                <div className="theme-media-overlay absolute inset-0" />
                 <div className="absolute inset-0 flex flex-col justify-between p-6">
-                  <div className="inline-flex self-start rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
+                  <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Strength Mode
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <h2 className="text-2xl font-bold leading-tight text-[#F7F7F7]">
+                      <h2 className="theme-media-heading text-2xl font-bold leading-tight">
                         {selectedPlan?.title || 'Focused performance split'}
                       </h2>
-                      <p className="mt-2 max-w-sm text-sm leading-6 text-[#d7dce6]">
+                      <p className="theme-media-copy mt-2 max-w-sm text-sm leading-6">
                         Lock into a split that matches your goal, your available equipment, and the number of days you can actually train.
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Days</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">{selectedPlan?.days.length ?? 0}</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Days</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold">{selectedPlan?.days.length ?? 0}</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Duration</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Duration</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlan ? getWorkoutDurationSummary(selectedPlan) : 'Flexible'}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Status</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7] capitalize">{selectedPlan?.status || 'draft'}</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Status</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold capitalize">{selectedPlan?.status || 'draft'}</p>
                       </div>
                     </div>
                   </div>

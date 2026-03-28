@@ -448,7 +448,7 @@ export const DietPage: React.FC = () => {
     const mealNutrition = calculateMealNutrition(meal);
 
     return (
-      <div key={`${dayNumber}-${meal.type}`} className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4">
+      <div key={`${dayNumber}-${meal.type}`} className="theme-subtle-panel rounded-lg border p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-3">
@@ -482,19 +482,19 @@ export const DietPage: React.FC = () => {
           mealNutrition.carbsGrams > 0 ||
           mealNutrition.fatsGrams > 0) ? (
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+            <div className="theme-subtle-panel rounded-xl border px-3 py-2">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calories</p>
               <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.calories} kcal</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+            <div className="theme-subtle-panel rounded-xl border px-3 py-2">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein</p>
               <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.proteinGrams}g</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+            <div className="theme-subtle-panel rounded-xl border px-3 py-2">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs</p>
               <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.carbsGrams}g</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] px-3 py-2">
+            <div className="theme-subtle-panel rounded-xl border px-3 py-2">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats</p>
               <p className="mt-1 text-sm font-semibold text-[#F7F7F7]">{mealNutrition.fatsGrams}g</p>
             </div>
@@ -544,12 +544,12 @@ export const DietPage: React.FC = () => {
               {day.theme ? <p className="mt-1 text-gray-400">{day.theme}</p> : null}
             </div>
 
-            <div className="min-w-[240px] rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel min-w-[240px] rounded-2xl border p-4">
               <div className="flex items-center justify-between text-sm text-gray-400">
                 <span>Daily progress</span>
                 <span className="font-semibold text-[#F7F7F7]">{completedMeals}/{totalMeals} meals</span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b1e2a]">
+              <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
                 <div
                   className="h-full rounded-full bg-[#00FF88] transition-all"
                   style={{ width: `${completionRate}%` }}
@@ -564,23 +564,23 @@ export const DietPage: React.FC = () => {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel rounded-xl border p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calories</p>
               <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.calories} kcal</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel rounded-xl border p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein</p>
               <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.proteinGrams}g</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel rounded-xl border p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs</p>
               <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.carbsGrams}g</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel rounded-xl border p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats</p>
               <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{dayNutrition.fatsGrams}g</p>
             </div>
-            <div className="rounded-xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+            <div className="theme-subtle-panel rounded-xl border p-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Calorie gap</p>
               <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
                 {calorieDifference === null ? 'N/A' : `${calorieDifference > 0 ? '+' : ''}${calorieDifference} kcal`}
@@ -614,7 +614,7 @@ export const DietPage: React.FC = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Nutrition Engine</p>
                 <h1 className="text-3xl font-black leading-[0.98] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
                   Turn your
-                  <span className="block bg-[linear-gradient(90deg,#00FF88_0%,#F4FFF9_55%,#FF6B00_100%)] bg-clip-text text-transparent">
+                  <span className="theme-diet-gradient block bg-clip-text text-transparent">
                     meals into momentum.
                   </span>
                 </h1>
@@ -667,42 +667,42 @@ export const DietPage: React.FC = () => {
             <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
               <div className="relative min-h-[520px] lg:min-h-[620px]">
                 <img src={heroImage} alt="Diet visual" className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.58)_48%,rgba(5,5,5,0.94)_100%)]" />
+                <div className="theme-media-overlay absolute inset-0" />
                 <div className="absolute inset-0 flex flex-col gap-5 p-6">
-                  <div className="inline-flex self-start rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
+                  <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Nutrition Mode
                   </div>
                   <div className="mt-auto space-y-4 pt-2">
                     <div>
-                      <h2 className="text-2xl font-bold leading-tight text-[#F7F7F7]">
+                      <h2 className="theme-media-heading text-2xl font-bold leading-tight">
                         {selectedPlan?.title || 'Cuisine-aware diet system'}
                       </h2>
-                      <p className="mt-2 max-w-sm text-sm leading-6 text-[#d7dce6]">
+                      <p className="theme-media-copy mt-2 max-w-sm text-sm leading-6">
                         Keep the structure practical, the cuisine familiar, and the calorie target realistic enough to follow.
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Calories</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Calories</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlanTargetCalories ? `${selectedPlanTargetCalories}` : estimatedTrackerCalories}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Preference</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7]">
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Preference</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlan ? formatPreferenceLabel(selectedPlan.preference) : 'Mixed'}
                         </p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Status</p>
-                        <p className="mt-2 text-xl font-bold text-[#F7F7F7] capitalize">{selectedPlan?.status || 'draft'}</p>
+                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Status</p>
+                        <p className="theme-media-heading mt-2 text-xl font-bold capitalize">{selectedPlan?.status || 'draft'}</p>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-[#00FF88]/20 bg-[radial-gradient(circle_at_top,rgba(0,255,136,0.12),transparent_70%),rgba(0,0,0,0.3)] p-4 backdrop-blur">
-                      <p className="text-xs uppercase tracking-[0.18em] text-[#9ea7b9]">Calorie tracker sync</p>
+                    <div className="theme-media-panel theme-media-panel-accent rounded-2xl border border-[#00FF88]/20 p-4 backdrop-blur">
+                      <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Calorie tracker sync</p>
                       <p className="mt-2 text-xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
-                      <p className="mt-2 text-sm leading-6 text-[#d7dce6]">
+                      <p className="theme-media-copy mt-2 text-sm leading-6">
                         {activePlan
                           ? `Your calorie tracker currently follows the active diet target. This selected plan would track at ${previewTrackerCalories} kcal when active.`
                           : `Before you start a diet plan, FitNova estimates your tracker target from your profile and goal. Once you save and activate a plan, the tracker updates to that plan target automatically.`}
@@ -728,28 +728,28 @@ export const DietPage: React.FC = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Current tracker target</p>
                 <p className="mt-2 text-2xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
                 <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
                   {activePlan ? 'This is coming from your active diet plan.' : 'This is your current goal-based estimate.'}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Goal-based estimate</p>
                 <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{estimatedTrackerCalories} kcal</p>
                 <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
                   FitNova uses your profile goal, activity, and body stats before any diet plan exists.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">After plan is active</p>
                 <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">Tracker updates</p>
                 <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
                   As soon as a diet plan is saved and active, the calorie tracker switches to that plan target automatically.
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Workout sync</p>
                 <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
                   {activeWorkoutPlan ? `${activeWorkoutPlan.days.length} day split` : 'No active split'}
@@ -763,7 +763,7 @@ export const DietPage: React.FC = () => {
             </div>
 
             {activeWorkoutPlan ? (
-              <div className="rounded-2xl border border-[#00FF88]/20 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border border-[#00FF88]/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Active workout split</p>
                 <p className="mt-2 text-sm leading-6 text-[#d5d9e3]">
                   {activeWorkoutPlan.title}: {activeWorkoutPlan.days.map((day) => `${day.dayLabel} ${day.focus}`).join(', ')}.
@@ -1001,7 +1001,7 @@ export const DietPage: React.FC = () => {
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                        className="theme-danger-button"
                         onClick={() => void handleDeletePlan(plan.id)}
                         isLoading={isDeleting}
                       >
@@ -1050,29 +1050,29 @@ export const DietPage: React.FC = () => {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                    <div className="theme-subtle-panel rounded-2xl border p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Plan completion</p>
                       <p className="mt-2 text-2xl font-bold text-[#00FF88]">{selectedPlanCompletionRate}%</p>
                     </div>
-                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                    <div className="theme-subtle-panel rounded-2xl border p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Average calories/day</p>
                       <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
                         {averageCaloriesPerDay ? `${averageCaloriesPerDay}` : 'N/A'}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                    <div className="theme-subtle-panel rounded-2xl border p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Protein/day</p>
                       <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
                         {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.proteinGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                    <div className="theme-subtle-panel rounded-2xl border p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Carbs/day</p>
                       <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
                         {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.carbsGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-4">
+                    <div className="theme-subtle-panel rounded-2xl border p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Fats/day</p>
                       <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
                         {selectedPlanNutrition ? `${Math.round(selectedPlanNutrition.fatsGrams / Math.max(selectedPlan.days.length, 1))}g` : 'N/A'}
@@ -1080,7 +1080,7 @@ export const DietPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-5">
+                  <div className="theme-subtle-panel rounded-2xl border p-5">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Calorie tracker</p>
@@ -1095,7 +1095,7 @@ export const DietPage: React.FC = () => {
                             {selectedPlanCompletedMeals}/{selectedPlanTotalMeals}
                           </span>
                         </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#1b1e2a]">
+                        <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
                           <div
                             className="h-full rounded-full bg-[#00FF88] transition-all"
                             style={{ width: `${selectedPlanCompletionRate}%` }}
@@ -1106,7 +1106,7 @@ export const DietPage: React.FC = () => {
                   </div>
 
                   {selectedPlan.notes ? (
-                    <div className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4 text-gray-300">
+                    <div className="theme-subtle-panel rounded-lg border p-4 text-gray-300">
                       {selectedPlan.notes}
                     </div>
                   ) : null}
@@ -1133,7 +1133,7 @@ export const DietPage: React.FC = () => {
                   <div className="flex justify-end">
                     <Button
                       variant="secondary"
-                      className="border-[#7a2f2f] text-[#ff9c9c] hover:border-[#ff6b6b] hover:bg-[#2a1111] hover:text-white"
+                      className="theme-danger-button"
                       onClick={() => void handleDeletePlan(selectedPlan.id)}
                       isLoading={actionState?.type === 'delete' && actionState.key === selectedPlan.id}
                     >

@@ -5,7 +5,6 @@ import { MainLayout } from '../components/Layout';
 import { Button, Input, Card } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage } from '../services/api';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -65,18 +64,60 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <Card variant="glass" className="overflow-hidden border-white/10 p-0">
-            <div className="relative aspect-[16/10]">
-              <img src={heroImage} alt="Training visual" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,8,8,0.88)_0%,rgba(8,8,8,0.28)_100%)]" />
-              <div className="absolute inset-0 flex flex-col justify-end p-6">
-                <div className="max-w-md space-y-3">
-                  <div className="inline-flex rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88] backdrop-blur">
+            <div className="relative min-h-[420px] overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.22),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(202,184,255,0.22),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.2),transparent_26%),linear-gradient(180deg,rgba(14,16,28,0.98)_0%,rgba(10,12,20,0.98)_100%)]" />
+              <div className="noise-overlay absolute inset-0" />
+              <div className="pointer-events-none absolute left-6 top-6 h-28 w-28 rounded-full border border-white/10" />
+              <div className="pointer-events-none absolute right-10 top-14 h-40 w-40 rounded-full border border-[#00FF88]/20 blur-[1px]" />
+              <div className="pointer-events-none absolute bottom-[-3rem] left-[16%] h-36 w-36 rounded-full bg-[#00FF88]/10 blur-3xl" />
+              <div className="pointer-events-none absolute right-[12%] top-[24%] h-44 w-44 rounded-full bg-[#cab8ff]/10 blur-3xl" />
+
+              <div className="relative flex h-full flex-col justify-between gap-8 p-6 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="theme-media-chip inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em]">
                     Locked in
                   </div>
-                  <h2 className="text-2xl font-semibold text-white">Your next session is one login away.</h2>
-                  <p className="text-sm leading-7 text-[#d5d9e3]">
-                    Jump back into plans, streaks, coach support, and the weekly system you already started building.
-                  </p>
+                  <div className="rounded-full border border-[#00FF88]/25 bg-[#00FF88]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88]">
+                    Session ready
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
+                  <div className="theme-media-panel rounded-[1.6rem] border p-5 backdrop-blur-xl">
+                    <p className="theme-media-copy text-xs font-semibold uppercase tracking-[0.2em]">Your next session</p>
+                    <h2 className="theme-media-heading mt-3 max-w-sm text-2xl font-semibold leading-tight">
+                      Your next session is one login away.
+                    </h2>
+                    <p className="theme-media-copy mt-3 max-w-md text-sm leading-7">
+                      Jump back into plans, streaks, coach support, and the weekly system you already started building.
+                    </p>
+                  </div>
+
+                  <div className="theme-media-panel theme-media-panel-accent rounded-[1.6rem] border p-5 backdrop-blur-xl">
+                    <p className="theme-media-copy text-xs font-semibold uppercase tracking-[0.2em]">Focus cue</p>
+                    <p className="theme-media-heading mt-3 text-3xl font-black">78%</p>
+                    <p className="mt-2 text-sm leading-6 text-[#d9fce9]">
+                      Weekly consistency stays strongest when today&apos;s plan starts on time.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                    <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Workouts</p>
+                    <p className="theme-media-heading mt-2 text-xl font-semibold">Plan queue</p>
+                    <p className="theme-media-copy mt-1 text-sm">Open your split and pick up where you left off.</p>
+                  </div>
+                  <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                    <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Nutrition</p>
+                    <p className="theme-media-heading mt-2 text-xl font-semibold">Calorie log</p>
+                    <p className="theme-media-copy mt-1 text-sm">Review targets, meals, and adherence without friction.</p>
+                  </div>
+                  <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                    <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Coach</p>
+                    <p className="theme-media-heading mt-2 text-xl font-semibold">Support thread</p>
+                    <p className="theme-media-copy mt-1 text-sm">Continue prompts, adjustments, and recovery notes.</p>
+                  </div>
                 </div>
               </div>
             </div>

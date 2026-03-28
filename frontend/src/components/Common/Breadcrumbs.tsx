@@ -18,7 +18,10 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' 
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={cn('flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em] text-[#8f97ab]', className)}>
+    <nav
+      aria-label="Breadcrumb"
+      className={cn('theme-breadcrumb flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.18em]', className)}
+    >
       {items.map((item, index) => {
         const isClickable = typeof item.onClick === 'function' && !item.isCurrent;
 
@@ -28,7 +31,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' 
               <button
                 type="button"
                 onClick={item.onClick}
-                className="rounded-full px-2 py-1 transition-colors hover:bg-white/5 hover:text-[#F7F7F7]"
+                className="theme-breadcrumb-link rounded-full px-2 py-1 transition-colors"
               >
                 {item.label}
               </button>
@@ -36,13 +39,13 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, className = '' 
               <span
                 className={cn(
                   'rounded-full px-2 py-1',
-                  item.isCurrent ? 'bg-white/5 text-[#F7F7F7]' : ''
+                  item.isCurrent ? 'theme-breadcrumb-current' : ''
                 )}
               >
                 {item.label}
               </span>
             )}
-            {index < items.length - 1 ? <span className="text-[#525867]">/</span> : null}
+            {index < items.length - 1 ? <span className="theme-breadcrumb-separator">/</span> : null}
           </React.Fragment>
         );
       })}

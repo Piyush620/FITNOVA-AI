@@ -5,13 +5,22 @@ import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Button, Card, Input, PremiumFeatureGate, Select, Textarea } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { aiAPI, caloriesAPI, dietAPI, getApiErrorMessage } from '../services/api';
-import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, DietPlan, MonthlyCalorieSummary } from '../types';
+import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, DietPlan, Meal, MonthlyCalorieSummary } from '../types';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 import { toastError, toastSuccess } from '../utils/toast';
+import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = { message?: string | string[] };
 type LogMode = 'ai' | 'manual';
 type ManualForm = { loggedDate: string; mealType: CalorieLog['mealType']; title: string; calories: string; proteinGrams: string; carbsGrams: string; fatsGrams: string; notes: string };
+type NextDietSlot = {
+  loggedDate: string;
+  mealType: CalorieLog['mealType'];
+  dayLabel: string;
+  theme?: string;
+  dayTargetCalories?: number;
+  meal: Meal;
+};
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthNow = () => new Date().toISOString().slice(0, 7);
@@ -37,7 +46,29 @@ const formatLocalDate = (date: Date) => {
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-const resolveNextDietSlot = (plan: DietPlan | null) => {
+const composeMealDescription = (meal: Meal, dayLabel?: string) => {
+  const parts = [
+    meal.title,
+    meal.description,
+    meal.items?.length ? `Items: ${meal.items.join(', ')}` : '',
+    dayLabel ? `Diet plan slot: ${dayLabel}` : '',
+  ].filter(Boolean);
+
+  return parts.join('. ');
+};
+
+const buildManualFormFromDietSlot = (slot: NextDietSlot): ManualForm => ({
+  loggedDate: slot.loggedDate,
+  mealType: slot.mealType,
+  title: slot.meal.title,
+  calories: slot.meal.calories != null ? String(slot.meal.calories) : '',
+  proteinGrams: slot.meal.proteinGrams != null ? String(slot.meal.proteinGrams) : '',
+  carbsGrams: slot.meal.carbsGrams != null ? String(slot.meal.carbsGrams) : '',
+  fatsGrams: slot.meal.fatsGrams != null ? String(slot.meal.fatsGrams) : '',
+  notes: slot.dayLabel,
+});
+
+const resolveNextDietSlot = (plan: DietPlan | null): NextDietSlot | null => {
   if (!plan?.days?.length) return null;
 
   const baseDate = plan.startDate ? new Date(plan.startDate) : new Date();
@@ -59,6 +90,9 @@ const resolveNextDietSlot = (plan: DietPlan | null) => {
       loggedDate: formatLocalDate(mealDate),
       mealType: nextMeal.type as CalorieLog['mealType'],
       dayLabel: day.dayLabel,
+      theme: day.theme,
+      dayTargetCalories: day.targetCalories ?? plan.targetCalories,
+      meal: nextMeal,
     };
   }
 
@@ -82,14 +116,49 @@ export const CaloriesPage: React.FC = () => {
   const [actionState, setActionState] = useState<string | null>(null);
   const [aiInsights, setAiInsights] = useState('');
   const [error, setError] = useState('');
+  const [nextDietSlot, setNextDietSlot] = useState<NextDietSlot | null>(null);
   const [dietSlotLabel, setDietSlotLabel] = useState('');
   const [hasAppliedDietSlot, setHasAppliedDietSlot] = useState(false);
   const targetSourceLabel = formatTargetSource(dailyData?.targetSource);
 
-  useEffect(() => { if (!hasPremiumAccess && mode === 'ai') setMode('manual'); }, [hasPremiumAccess, mode]);
-  useEffect(() => setManualForm((current) => ({ ...current, loggedDate: selectedDate })), [selectedDate]);
-  useEffect(() => { void (async () => { try { setDailyData((await caloriesAPI.getDaily(selectedDate)).data); setError(''); } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; setError(nextError || 'Failed to load daily calorie logs.'); } })(); }, [selectedDate]);
-  useEffect(() => { void (async () => { try { setMonthlySummary((await caloriesAPI.getMonthlySummary(selectedMonth)).data); } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; setError(nextError || 'Failed to load monthly calorie summary.'); } })(); }, [selectedMonth]);
+  useEffect(() => {
+    if (!hasPremiumAccess && mode === 'ai') setMode('manual');
+  }, [hasPremiumAccess, mode]);
+
+  useEffect(() => {
+    setManualForm((current) => ({ ...current, loggedDate: selectedDate }));
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const loadDailyData = async () => {
+      try {
+        const response = await caloriesAPI.getDaily(selectedDate);
+        setDailyData(response.data);
+        setError('');
+      } catch (requestError) {
+        const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+          ? getApiErrorMessage(requestError.response?.data?.message)
+          : undefined;
+        setError(nextError || 'Failed to load daily calorie logs.');
+      }
+    };
+    void loadDailyData();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    const loadMonthlySummary = async () => {
+      try {
+        const response = await caloriesAPI.getMonthlySummary(selectedMonth);
+        setMonthlySummary(response.data);
+      } catch (requestError) {
+        const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+          ? getApiErrorMessage(requestError.response?.data?.message)
+          : undefined;
+        setError(nextError || 'Failed to load monthly calorie summary.');
+      }
+    };
+    void loadMonthlySummary();
+  }, [selectedMonth]);
   useEffect(() => {
     const syncDietSlot = async (applyNextSlot = false) => {
       try {
@@ -97,10 +166,12 @@ export const CaloriesPage: React.FC = () => {
         const nextSlot = resolveNextDietSlot(response.data);
 
         if (!nextSlot) {
+          setNextDietSlot(null);
           setDietSlotLabel('');
           return;
         }
 
+        setNextDietSlot(nextSlot);
         setDietSlotLabel(`${nextSlot.dayLabel} ${formatMealLabel(nextSlot.mealType)}`);
 
         if (applyNextSlot || !hasAppliedDietSlot) {
@@ -116,6 +187,7 @@ export const CaloriesPage: React.FC = () => {
         }
       } catch (requestError) {
         if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
+          setNextDietSlot(null);
           setDietSlotLabel('');
           return;
         }
@@ -161,75 +233,315 @@ export const CaloriesPage: React.FC = () => {
       : estimateGoalCalories(user?.profile)
   ), [monthlySummary?.targetCalories, user?.profile]);
   const remainingCalories = useMemo(() => (dailyData ? displayTargetCalories - dailyData.totals.calories : 0), [dailyData, displayTargetCalories]);
+  const nextDietMealCompletion = useMemo(() => {
+    if (!nextDietSlot || !dailyData) {
+      return false;
+    }
+
+    return dailyData.entries.some(
+      (entry) =>
+        entry.loggedDate === nextDietSlot.loggedDate &&
+        entry.mealType === nextDietSlot.mealType &&
+        entry.title.trim().toLowerCase() === nextDietSlot.meal.title.trim().toLowerCase(),
+    );
+  }, [dailyData, nextDietSlot]);
 
   const refreshData = async (date = selectedDate, month = selectedMonth) => {
-    const [dailyResponse, monthlyResponse] = await Promise.all([caloriesAPI.getDaily(date), caloriesAPI.getMonthlySummary(month)]);
-    setDailyData(dailyResponse.data); setMonthlySummary(monthlyResponse.data); setError('');
+    try {
+      const [dailyResponse, monthlyResponse] = await Promise.all([
+        caloriesAPI.getDaily(date),
+        caloriesAPI.getMonthlySummary(month),
+      ]);
+      setDailyData(dailyResponse.data);
+      setMonthlySummary(monthlyResponse.data);
+      setError('');
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      setError(nextError || 'Failed to refresh calorie data.');
+    }
   };
 
-  const resetComposer = () => { setMode(hasPremiumAccess ? 'ai' : 'manual'); setEditingLogId(null); setEstimate(null); setAiMealType('breakfast'); setAiMealText(''); setManualForm(emptyManual(selectedDate)); };
+  const resetComposer = () => {
+    setMode(hasPremiumAccess ? 'ai' : 'manual');
+    setEditingLogId(null);
+    setEstimate(null);
+    setAiMealType(nextDietSlot?.mealType ?? 'breakfast');
+    setAiMealText('');
+    setManualForm(nextDietSlot ? buildManualFormFromDietSlot(nextDietSlot) : emptyManual(selectedDate));
+  };
+
+  const handleUseDietMealInManual = () => {
+    if (!nextDietSlot) {
+      return;
+    }
+
+    setMode('manual');
+    setEditingLogId(null);
+    setEstimate(null);
+    setSelectedDate(nextDietSlot.loggedDate);
+    setSelectedMonth(nextDietSlot.loggedDate.slice(0, 7));
+    setManualForm(buildManualFormFromDietSlot(nextDietSlot));
+  };
+
+  const handleUseDietMealInAi = () => {
+    if (!nextDietSlot) {
+      return;
+    }
+
+    setMode('ai');
+    setEditingLogId(null);
+    setEstimate(null);
+    setSelectedDate(nextDietSlot.loggedDate);
+    setSelectedMonth(nextDietSlot.loggedDate.slice(0, 7));
+    setAiMealType(nextDietSlot.mealType);
+    setAiMealText(composeMealDescription(nextDietSlot.meal, nextDietSlot.dayLabel));
+  };
 
   const handleEstimate = async () => {
-    if (!hasPremiumAccess) return toastError('Premium subscription required for AI calorie estimation.');
-    if (!aiMealText.trim()) return toastError('Describe what you ate first.');
+    if (!hasPremiumAccess) {
+      toastError('Premium subscription required for AI calorie estimation.');
+      return;
+    }
+    if (!aiMealText.trim()) {
+      toastError('Describe what you ate first.');
+      return;
+    }
     setActionState('estimate');
-    try { setEstimate((await aiAPI.estimateCalorieLog({ loggedDate: selectedDate, mealType: aiMealType, rawInput: aiMealText.trim() })).data.estimate); toastSuccess('AI estimate ready.'); }
-    catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; toastError(nextError || 'Could not estimate that meal.'); }
-    finally { setActionState(null); }
+    try {
+      const response = await aiAPI.estimateCalorieLog({
+        loggedDate: selectedDate,
+        mealType: aiMealType,
+        rawInput: aiMealText.trim(),
+      });
+      setEstimate(response.data.estimate);
+      toastSuccess('AI estimate ready.');
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      toastError(nextError || 'Could not estimate that meal.');
+    } finally {
+      setActionState(null);
+    }
   };
 
   const handleSaveEstimate = async () => {
     if (!estimate) return;
     setActionState('save-estimate');
     try {
-      await caloriesAPI.createLog({ loggedDate: estimate.loggedDate, mealType: estimate.mealType, title: estimate.title, source: 'ai', rawInput: estimate.rawInput, calories: estimate.calories, proteinGrams: estimate.proteinGrams, carbsGrams: estimate.carbsGrams, fatsGrams: estimate.fatsGrams, notes: estimate.notes ?? null, confidence: estimate.confidence, parsedItems: estimate.parsedItems });
-      await refreshData(estimate.loggedDate, estimate.loggedDate.slice(0, 7)); setSelectedDate(estimate.loggedDate); setSelectedMonth(estimate.loggedDate.slice(0, 7)); toastSuccess('Estimated meal saved.'); resetComposer();
-    } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; toastError(nextError || 'Could not save estimated meal.'); }
-    finally { setActionState(null); }
+      await caloriesAPI.createLog({
+        loggedDate: estimate.loggedDate,
+        mealType: estimate.mealType,
+        title: estimate.title,
+        source: 'ai',
+        rawInput: estimate.rawInput,
+        calories: estimate.calories,
+        proteinGrams: estimate.proteinGrams,
+        carbsGrams: estimate.carbsGrams,
+        fatsGrams: estimate.fatsGrams,
+        notes: estimate.notes ?? null,
+        confidence: estimate.confidence,
+        parsedItems: estimate.parsedItems,
+      });
+      const mealDate = estimate.loggedDate;
+      const mealMonth = mealDate.slice(0, 7);
+      await refreshData(mealDate, mealMonth);
+      setSelectedDate(mealDate);
+      setSelectedMonth(mealMonth);
+      toastSuccess('Estimated meal saved.');
+      resetComposer();
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      toastError(nextError || 'Could not save estimated meal.');
+    } finally {
+      setActionState(null);
+    }
   };
 
   const handleSaveManual = async () => {
-    if (!manualForm.title.trim() || !manualForm.calories.trim()) return toastError('Add at least a meal title and calories.');
-    const payload = { loggedDate: manualForm.loggedDate, mealType: manualForm.mealType, title: manualForm.title.trim(), source: 'manual' as const, rawInput: null, calories: Number(manualForm.calories), proteinGrams: manualForm.proteinGrams ? Number(manualForm.proteinGrams) : null, carbsGrams: manualForm.carbsGrams ? Number(manualForm.carbsGrams) : null, fatsGrams: manualForm.fatsGrams ? Number(manualForm.fatsGrams) : null, notes: manualForm.notes.trim() || null, confidence: null, parsedItems: null };
+    if (!manualForm.title.trim() || !manualForm.calories.trim()) {
+      toastError('Add at least a meal title and calories.');
+      return;
+    }
+
+    const calories = Number(manualForm.calories);
+    const proteinGrams = manualForm.proteinGrams ? Number(manualForm.proteinGrams) : null;
+    const carbsGrams = manualForm.carbsGrams ? Number(manualForm.carbsGrams) : null;
+    const fatsGrams = manualForm.fatsGrams ? Number(manualForm.fatsGrams) : null;
+    const hasInvalidNumber = [calories, proteinGrams, carbsGrams, fatsGrams].some(
+      (value) => value != null && (!Number.isFinite(value) || value < 0),
+    );
+
+    if (!Number.isFinite(calories) || calories <= 0 || hasInvalidNumber) {
+      toastError('Use valid positive calories and non-negative macro values.');
+      return;
+    }
+
+    const payload = {
+      loggedDate: manualForm.loggedDate,
+      mealType: manualForm.mealType,
+      title: manualForm.title.trim(),
+      source: 'manual' as const,
+      rawInput: null,
+      calories,
+      proteinGrams,
+      carbsGrams,
+      fatsGrams,
+      notes: manualForm.notes.trim() || null,
+      confidence: null,
+      parsedItems: null,
+    };
     setActionState(editingLogId ? `update-${editingLogId}` : 'manual-save');
     try {
-      if (editingLogId) { await caloriesAPI.updateLog(editingLogId, payload); toastSuccess('Calorie entry updated.'); } else { await caloriesAPI.createLog(payload); toastSuccess('Manual calorie entry added.'); }
-      await refreshData(manualForm.loggedDate, manualForm.loggedDate.slice(0, 7)); setSelectedDate(manualForm.loggedDate); setSelectedMonth(manualForm.loggedDate.slice(0, 7)); resetComposer();
-    } catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; toastError(nextError || 'Could not save calorie entry.'); }
-    finally { setActionState(null); }
+      if (editingLogId) {
+        await caloriesAPI.updateLog(editingLogId, payload);
+        toastSuccess('Calorie entry updated.');
+      } else {
+        await caloriesAPI.createLog(payload);
+        toastSuccess('Manual calorie entry added.');
+      }
+      const mealDate = manualForm.loggedDate;
+      const mealMonth = mealDate.slice(0, 7);
+      await refreshData(mealDate, mealMonth);
+      setSelectedDate(mealDate);
+      setSelectedMonth(mealMonth);
+      resetComposer();
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      toastError(nextError || 'Could not save calorie entry.');
+    } finally {
+      setActionState(null);
+    }
   };
 
   const handleEdit = (entry: CalorieLog) => {
-    setMode('manual'); setEditingLogId(entry.id); setEstimate(null); setSelectedDate(entry.loggedDate); setSelectedMonth(entry.loggedDate.slice(0, 7));
-    setManualForm({ loggedDate: entry.loggedDate, mealType: entry.mealType, title: entry.title, calories: String(entry.calories), proteinGrams: entry.proteinGrams != null ? String(entry.proteinGrams) : '', carbsGrams: entry.carbsGrams != null ? String(entry.carbsGrams) : '', fatsGrams: entry.fatsGrams != null ? String(entry.fatsGrams) : '', notes: entry.notes ?? '' });
+    setMode('manual');
+    setEditingLogId(entry.id);
+    setEstimate(null);
+    setSelectedDate(entry.loggedDate);
+    setSelectedMonth(entry.loggedDate.slice(0, 7));
+    setManualForm({
+      loggedDate: entry.loggedDate,
+      mealType: entry.mealType,
+      title: entry.title,
+      calories: String(entry.calories),
+      proteinGrams: entry.proteinGrams != null ? String(entry.proteinGrams) : '',
+      carbsGrams: entry.carbsGrams != null ? String(entry.carbsGrams) : '',
+      fatsGrams: entry.fatsGrams != null ? String(entry.fatsGrams) : '',
+      notes: entry.notes ?? '',
+    });
   };
 
   const handleDelete = async (entry: CalorieLog) => {
     setActionState(`delete-${entry.id}`);
-    try { await caloriesAPI.deleteLog(entry.id); await refreshData(entry.loggedDate, entry.loggedDate.slice(0, 7)); toastSuccess('Calorie entry removed.'); if (editingLogId === entry.id) resetComposer(); }
-    catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; toastError(nextError || 'Could not delete calorie entry.'); }
-    finally { setActionState(null); }
+    try {
+      await caloriesAPI.deleteLog(entry.id);
+      const mealDate = entry.loggedDate;
+      const mealMonth = mealDate.slice(0, 7);
+      await refreshData(mealDate, mealMonth);
+      toastSuccess('Calorie entry removed.');
+      if (editingLogId === entry.id) {
+        resetComposer();
+      }
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      toastError(nextError || 'Could not delete calorie entry.');
+    } finally {
+      setActionState(null);
+    }
   };
 
   const handleGenerateAiInsights = async () => {
-    if (!hasPremiumAccess) return toastError('Premium subscription required for AI calorie insights.');
+    if (!hasPremiumAccess) {
+      toastError('Premium subscription required for AI calorie insights.');
+      return;
+    }
     setActionState('ai-insights');
-    try { setAiInsights((await aiAPI.getCalorieInsights(selectedMonth)).data.content); toastSuccess('AI calorie review generated.'); }
-    catch (requestError) { const nextError = axios.isAxiosError<ApiErrorResponse>(requestError) ? getApiErrorMessage(requestError.response?.data?.message) : undefined; toastError(nextError || 'Could not generate AI calorie insights.'); }
-    finally { setActionState(null); }
+    try {
+      const response = await aiAPI.getCalorieInsights(selectedMonth);
+      setAiInsights(response.data.content);
+      toastSuccess('AI calorie review generated.');
+    } catch (requestError) {
+      const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
+        ? getApiErrorMessage(requestError.response?.data?.message)
+        : undefined;
+      toastError(nextError || 'Could not generate AI calorie insights.');
+    } finally {
+      setActionState(null);
+    }
   };
 
   return (
     <MainLayout>
       <div className="w-full space-y-5 sm:space-y-6">
         <Card variant="gradient" className="overflow-hidden p-0">
-          <div className="relative grid gap-5 px-5 py-6 sm:px-7 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,255,136,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(255,107,0,0.1),transparent_20%)]" />
-            <div className="relative space-y-4">
-              <Breadcrumbs items={[{ label: 'Dashboard', onClick: () => navigate('/dashboard') }, { label: 'Calories', isCurrent: true }]} />
-              <div className="space-y-3"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">AI Food Logging</p><h1 className="text-[2rem] font-black leading-[0.95] text-[#F7F7F7] sm:text-[2.6rem] lg:text-[3.2rem]">Describe the meal.<span className="block text-[#a5afc5]">Keep your tracker fast and usable.</span></h1><p className="max-w-2xl text-sm leading-7 text-[#a5afc5] sm:text-base">Log meals in plain language, save AI estimates when you need speed, or switch to manual entry whenever you want tighter control.</p></div>
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <Breadcrumbs items={[{ label: 'Dashboard', onClick: () => navigate('/dashboard') }, { label: 'Calories', isCurrent: true }]} />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">AI Food Logging</p>
+                <h1 className="text-3xl font-black leading-[0.98] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
+                  Describe the meal.
+                  <span className="block text-[#a5afc5]">Keep your tracker fast and usable.</span>
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 text-[#a5afc5] sm:text-base">
+                  Log meals in plain language, save AI estimates when you need speed, or switch to manual entry whenever you want tighter control.
+                </p>
+              </div>
             </div>
-            <div className="relative grid grid-cols-2 gap-3">{[['Today', `${dailyData?.totals.calories ?? 0}`], ['Remaining', dailyData ? `${remainingCalories}` : '--'], ['Goal target', `${displayTargetCalories}`], ['Avg day', `${monthlySummary?.averageLoggedDayCalories ?? 0}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-black/20 p-4"><p className="text-sm text-[#8f97ab]">{label}</p><p className={`text-2xl font-bold sm:text-3xl ${label === 'Remaining' && remainingCalories < 0 ? 'text-[#FF6B00]' : label === 'Remaining' || label === 'Goal target' ? 'text-[#00FF88]' : 'text-[#F7F7F7]'}`}>{value}</p></Card>)}</div>
+
+            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
+              <div className="relative min-h-[420px] lg:min-h-[520px]">
+                <img src={heroImage} alt="Calories visual" className="h-full w-full object-cover" />
+                <div className="theme-media-overlay absolute inset-0" />
+                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+                  <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
+                    Tracker Mode
+                  </div>
+                  <div className="mt-auto space-y-4 pt-2">
+                    <div>
+                      <h2 className="theme-media-heading text-2xl font-bold leading-tight">
+                        Calorie target and daily rhythm
+                      </h2>
+                      <p className="theme-media-copy mt-2 max-w-sm text-sm leading-6">
+                        Keep daily targets visible, move faster with AI logging, and stay synced with your active diet plan when one is running.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        ['Today', `${dailyData?.totals.calories ?? 0}`],
+                        ['Remaining', dailyData ? `${remainingCalories}` : '--'],
+                        ['Goal target', `${displayTargetCalories}`],
+                        ['Avg day', `${monthlySummary?.averageLoggedDayCalories ?? 0}`],
+                      ].map(([label, value]) => (
+                        <div key={label} className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                          <p className="theme-media-copy text-sm">{label}</p>
+                          <p
+                            className={`mt-2 text-2xl font-bold sm:text-3xl ${
+                              label === 'Remaining' && remainingCalories < 0
+                                ? 'text-[#FF6B00]'
+                                : label === 'Remaining' || label === 'Goal target'
+                                  ? 'text-[#00FF88]'
+                                  : 'theme-media-heading'
+                            }`}
+                          >
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </Card>
 
@@ -238,6 +550,79 @@ export const CaloriesPage: React.FC = () => {
           <div className="rounded-xl border border-[#00FF88]/20 bg-[#00FF88]/10 p-4 text-sm text-[#bfffe0]">
             The calorie logger is following your next active diet meal: <span className="font-semibold">{dietSlotLabel}</span>.
           </div>
+        ) : null}
+        {nextDietSlot ? (
+          <Card variant="glass" className="space-y-4 rounded-[1.5rem] border border-[#00FF88]/15 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Diet-linked quick log</p>
+                <h2 className="text-xl font-bold text-[#F7F7F7]">
+                  {nextDietSlot.meal.title}
+                </h2>
+                <p className="text-sm leading-6 text-[#aab3c6]">
+                  {nextDietSlot.dayLabel}
+                  {nextDietSlot.theme ? `, ${nextDietSlot.theme}` : ''} on {formatDateLabel(nextDietSlot.loggedDate)}.
+                </p>
+                {nextDietSlot.meal.description ? (
+                  <p className="text-sm leading-6 text-[#8f97ab]">{nextDietSlot.meal.description}</p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="accent" onClick={handleUseDietMealInManual}>
+                  Use In Manual Logger
+                </Button>
+                {hasPremiumAccess ? (
+                  <Button variant="secondary" onClick={handleUseDietMealInAi}>
+                    Use In AI Logger
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Meal type</p>
+                <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">{formatMealLabel(nextDietSlot.mealType)}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Plan calories</p>
+                <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                  {nextDietSlot.meal.calories != null ? `${nextDietSlot.meal.calories}` : 'N/A'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Protein</p>
+                <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                  {nextDietSlot.meal.proteinGrams != null ? `${nextDietSlot.meal.proteinGrams}g` : 'N/A'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Carbs</p>
+                <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                  {nextDietSlot.meal.carbsGrams != null ? `${nextDietSlot.meal.carbsGrams}g` : 'N/A'}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Status</p>
+                <p className={`mt-2 text-lg font-semibold ${nextDietMealCompletion ? 'text-[#00FF88]' : 'text-[#F7F7F7]'}`}>
+                  {nextDietMealCompletion ? 'Logged' : 'Ready'}
+                </p>
+                {nextDietSlot.dayTargetCalories ? (
+                  <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[#8f97ab]">
+                    Day target {nextDietSlot.dayTargetCalories} kcal
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            {nextDietSlot.meal.items?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {nextDietSlot.meal.items.map((item) => (
+                  <span key={item} className="rounded-full border border-white/10 px-3 py-1 text-xs text-[#d7dce7]">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </Card>
         ) : null}
         <div className="rounded-xl border border-white/10 bg-[#0f1320] p-4 text-sm text-[#d5d9e3]">
           <span className="rounded-full border border-[#00FF88]/25 bg-[#00FF88]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#9ff9ca]">

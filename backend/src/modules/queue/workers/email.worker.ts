@@ -6,7 +6,7 @@ export interface EmailJobPayload {
   email: string;
   subject: string;
   template: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 @Processor('email')
@@ -14,7 +14,7 @@ export class EmailWorker extends WorkerHost {
   private readonly logger = new Logger(EmailWorker.name);
 
   async process(job: Job<EmailJobPayload>) {
-    const { email, subject, template, data } = job.data;
+    const { email, subject, template, data: _data } = job.data;
 
     this.logger.log(`Processing email job`, {
       jobId: job.id,

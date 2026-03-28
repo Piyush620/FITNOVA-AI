@@ -5,7 +5,7 @@ import { Job } from 'bullmq';
 export interface AiGenerationJobPayload {
   userId: string;
   type: 'workout' | 'diet';
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
 @Processor('ai-generation')
@@ -21,7 +21,7 @@ export class AiGenerationWorker extends WorkerHost {
 
     try {
       // Simulate AI generation - in production, this would call your AI service
-      const { userId, type, payload } = job.data;
+      const { userId, type, payload: _payload } = job.data;
 
       // Log progress
       await job.updateProgress(25);

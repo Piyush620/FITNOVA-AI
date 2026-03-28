@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, beforeEach, vi, expect } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { AxiosHeaders } from 'axios';
+import type { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { ProfilePage } from './Profile';
 
 vi.mock('../hooks/useAuth', () => ({
@@ -24,13 +26,25 @@ import { usersAPI } from '../services/api';
 const mockUseAuth = vi.mocked(useAuth);
 const mockGetDashboard = vi.mocked(usersAPI.getDashboard);
 
+const createAxiosResponse = <T,>(data: T): AxiosResponse<T> => ({
+  data,
+  status: 200,
+  statusText: 'OK',
+  headers: {},
+  config: {
+    headers: new AxiosHeaders(),
+  } as InternalAxiosRequestConfig,
+});
+
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: {
+        id: 'user-1',
         email: 'vaishnavi@example.com',
+        roles: ['user'],
         profile: {
           fullName: 'Vaishnavi Upadhyay',
           goal: 'Fat loss',
@@ -40,12 +54,23 @@ describe('ProfilePage', () => {
           heightCm: 160,
           weightKg: 58,
         },
+        createdAt: '2026-03-01T00:00:00.000Z',
       },
+      accessToken: 'token',
+      isLoading: false,
+      hasHydrated: true,
+      error: null,
+      hasSession: true,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
       getCurrentUser: vi.fn(),
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
     });
 
     mockGetDashboard.mockResolvedValue({
-      data: {
+      ...createAxiosResponse({
         greeting: 'Welcome back, Vaishnavi',
         currentWeight: 58,
         startingWeight: 61,
@@ -71,7 +96,7 @@ describe('ProfilePage', () => {
           weightChangeKg: -3,
         },
         nextCheckIn: new Date().toISOString(),
-      },
+      }),
     });
   });
 
@@ -86,7 +111,7 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Profile & Progress')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Vaishnavi Upadhyay')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vaishnavi Upadhyay' })).toBeInTheDocument();
     expect(screen.getByText('82%')).toBeInTheDocument();
     expect(screen.getByText('1850')).toBeInTheDocument();
     expect(screen.getByText('AI Personalization Inputs')).toBeInTheDocument();

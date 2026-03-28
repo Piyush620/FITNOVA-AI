@@ -19,11 +19,25 @@ describe('ProtectedRoute', () => {
 
   it('should render children when user is authenticated', () => {
     mockUseAuth.mockReturnValue({
-      hasHydrated: true,
-      hasSession: true,
-      isAuthenticated: true,
+      user: {
+        id: 'user-1',
+        email: 'test@example.com',
+        roles: ['user'],
+        profile: { fullName: 'Test User' },
+        createdAt: '2026-03-01T00:00:00.000Z',
+      },
+      accessToken: 'token',
       isLoading: false,
+      hasHydrated: true,
+      error: null,
+      isAuthenticated: true,
+      hasSession: true,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
       getCurrentUser: vi.fn(),
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
     });
 
     render(
@@ -39,11 +53,19 @@ describe('ProtectedRoute', () => {
 
   it('should show loading state while checking authentication', () => {
     mockUseAuth.mockReturnValue({
-      hasHydrated: true,
-      hasSession: false,
-      isAuthenticated: false,
+      user: null,
+      accessToken: null,
       isLoading: true,
+      hasHydrated: true,
+      error: null,
+      isAuthenticated: false,
+      hasSession: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
       getCurrentUser: vi.fn(),
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
     });
 
     const { container } = render(
@@ -60,11 +82,19 @@ describe('ProtectedRoute', () => {
 
   it('should redirect to login when user is not authenticated', () => {
     mockUseAuth.mockReturnValue({
-      hasHydrated: true,
-      hasSession: false,
-      isAuthenticated: false,
+      user: null,
+      accessToken: null,
       isLoading: false,
+      hasHydrated: true,
+      error: null,
+      isAuthenticated: false,
+      hasSession: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
       getCurrentUser: vi.fn(),
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
     });
 
     render(
@@ -82,11 +112,19 @@ describe('ProtectedRoute', () => {
   it('should call getCurrentUser if not authenticated and not loading', () => {
     const mockGetCurrentUser = vi.fn();
     mockUseAuth.mockReturnValue({
-      hasHydrated: true,
-      hasSession: true,
-      isAuthenticated: false,
+      user: null,
+      accessToken: 'token',
       isLoading: false,
+      hasHydrated: true,
+      error: null,
+      isAuthenticated: false,
+      hasSession: true,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
       getCurrentUser: mockGetCurrentUser,
+      clearError: vi.fn(),
+      setTokens: vi.fn(),
     });
 
     render(

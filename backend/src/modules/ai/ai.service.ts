@@ -49,6 +49,10 @@ import {
 
 @Injectable()
 export class AiService {
+  private readonly executionPolicy = {
+    queued: ['workout-plan', 'diet-plan', 'adaptive-check-in'],
+    synchronous: ['workout-preview', 'diet-preview', 'coach-chat', 'calorie-estimate', 'calorie-insights'],
+  } as const;
   private readonly weekdayLabels = [
     'Monday',
     'Tuesday',
@@ -114,6 +118,7 @@ export class AiService {
       provider: this.provider,
       configured: this.provider === 'gemini' ? !!this.geminiClient : !!this.openAiClient,
       model: this.model,
+      executionPolicy: this.executionPolicy,
     };
   }
 
@@ -432,6 +437,7 @@ export class AiService {
       jobId: job.id,
       queue: job.queueName,
       name: job.name,
+      executionMode: 'queued',
     };
   }
 
@@ -468,12 +474,12 @@ export class AiService {
       .trim();
 
     try {
-      return JSON.parse(withoutFences) as Record<string, any>;
+      return JSON.parse(withoutFences) as Record<string, unknown>;
     } catch {
       const firstBrace = withoutFences.indexOf('{');
       const lastBrace = withoutFences.lastIndexOf('}');
       if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return JSON.parse(withoutFences.slice(firstBrace, lastBrace + 1)) as Record<string, any>;
+        return JSON.parse(withoutFences.slice(firstBrace, lastBrace + 1)) as Record<string, unknown>;
       }
 
       throw new InternalServerErrorException(

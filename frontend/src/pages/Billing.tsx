@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { subscriptionsAPI, getApiErrorMessage } from '../services/api';
 import type { CheckoutSessionResponse, SubscriptionConfigStatus, SubscriptionSummary } from '../types';
 import { toastError, toastSuccess } from '../utils/toast';
+import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -193,40 +194,62 @@ export const BillingPage: React.FC = () => {
     <MainLayout>
       <div className="w-full space-y-8">
         <Card variant="gradient" className="overflow-hidden p-0">
-          <div className="relative grid gap-6 px-6 py-7 sm:px-8 lg:grid-cols-[1.08fr_0.92fr] lg:px-10">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(142,247,199,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(202,184,255,0.16),transparent_24%)]" />
-            <div className="relative space-y-4">
-              <Breadcrumbs
-                items={[
-                  { label: 'Dashboard', onClick: () => navigate('/dashboard') },
-                  { label: 'Billing', isCurrent: true },
-                ]}
-              />
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
-                Billing
-              </p>
-              <h1 className="text-[2.2rem] font-black leading-[0.95] text-[#F7F7F7] sm:text-[2.8rem]">
-                Manage premium access and checkout.
-              </h1>
-              <p className="max-w-2xl text-sm leading-7 text-[#aeb7cb] sm:text-base">
-                This page shows your current subscription state and starts Stripe Checkout when
-                billing is configured. For resume/demo use, Stripe test mode is enough.
-              </p>
+          <div className="grid gap-8 p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <Breadcrumbs
+                  items={[
+                    { label: 'Dashboard', onClick: () => navigate('/dashboard') },
+                    { label: 'Billing', isCurrent: true },
+                  ]}
+                />
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">
+                  Billing
+                </p>
+                <h1 className="text-3xl font-black leading-[0.98] text-[#F7F7F7] sm:text-4xl lg:text-5xl">
+                  Manage premium access and checkout.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 text-[#aeb7cb] sm:text-base">
+                  This page shows your current subscription state and starts Stripe Checkout when
+                  billing is configured. For resume/demo use, Stripe test mode is enough.
+                </p>
+              </div>
             </div>
 
-            <div className="relative grid gap-3 sm:grid-cols-2">
-              {[
-                ['Tier', subscription?.tier ?? 'free'],
-                ['Plan', subscription?.plan ?? 'free'],
-                ['Status', subscription?.status ?? 'inactive'],
-                ['Premium access', subscription?.hasPremiumAccess ? 'Yes' : 'No'],
-              ].map(([label, value]) => (
-                <Card key={label} className="space-y-2 border-white/10 bg-black/20 p-5">
-                  <p className="text-sm text-[#8f97ab]">{label}</p>
-                  <p className="text-2xl font-bold capitalize text-[#F7F7F7]">{value}</p>
-                </Card>
-              ))}
-            </div>
+            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
+              <div className="relative min-h-[420px] lg:min-h-[520px]">
+                <img src={heroImage} alt="Billing visual" className="h-full w-full object-cover" />
+                <div className="theme-media-overlay absolute inset-0" />
+                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+                  <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
+                    Premium Access
+                  </div>
+                  <div className="mt-auto space-y-4 pt-2">
+                    <div>
+                      <h2 className="theme-media-heading text-2xl font-bold leading-tight">
+                        Subscription state at a glance
+                      </h2>
+                      <p className="theme-media-copy mt-2 max-w-sm text-sm leading-6">
+                        See your current tier, billing plan, and premium access before you move into Stripe Checkout.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        ['Tier', subscription?.tier ?? 'free'],
+                        ['Plan', subscription?.plan ?? 'free'],
+                        ['Status', subscription?.status ?? 'inactive'],
+                        ['Premium access', subscription?.hasPremiumAccess ? 'Yes' : 'No'],
+                      ].map(([label, value]) => (
+                        <div key={label} className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                          <p className="theme-media-copy text-sm">{label}</p>
+                          <p className="theme-media-heading mt-2 text-2xl font-bold capitalize">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </Card>
 
@@ -258,25 +281,25 @@ export const BillingPage: React.FC = () => {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-sm text-[#8f97ab]">Current period start</p>
                 <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
                   {formatDate(subscription?.currentPeriodStart)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-sm text-[#8f97ab]">Current period end</p>
                 <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
                   {formatDate(subscription?.currentPeriodEnd)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-sm text-[#8f97ab]">Stripe customer</p>
                 <p className="mt-2 break-all text-sm font-medium text-[#F7F7F7]">
                   {subscription?.stripeCustomerId ?? 'Not created yet'}
                 </p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-sm text-[#8f97ab]">Stripe subscription</p>
                 <p className="mt-2 break-all text-sm font-medium text-[#F7F7F7]">
                   {subscription?.stripeSubscriptionId ?? 'No active subscription'}
@@ -298,7 +321,7 @@ export const BillingPage: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-[#0f1320] p-4">
+              <div className="theme-subtle-panel rounded-2xl border p-4">
                 <p className="text-sm text-[#8f97ab]">Billing setup readiness</p>
                 <p className={`mt-2 text-xl font-bold ${isBillingReady ? 'text-[#00FF88]' : 'text-[#FFB27A]'}`}>
                   {isBillingReady ? 'Ready for test checkout' : 'Setup still needed'}
@@ -319,8 +342,8 @@ export const BillingPage: React.FC = () => {
                       key={plan.key}
                       className={`rounded-[1.75rem] border p-5 transition-all duration-300 ${
                         isActivePlan
-                          ? 'border-[#00FF88]/40 bg-[linear-gradient(135deg,rgba(18,34,31,0.92)_0%,rgba(10,18,26,0.96)_100%)] shadow-[0_20px_50px_rgba(0,255,136,0.08)]'
-                          : 'border-white/10 bg-[linear-gradient(135deg,rgba(15,19,32,0.94)_0%,rgba(12,16,28,0.98)_100%)]'
+                          ? 'theme-billing-plan theme-billing-plan-active border-[#00FF88]/40'
+                          : 'theme-billing-plan border-white/10'
                       }`}
                     >
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -330,8 +353,8 @@ export const BillingPage: React.FC = () => {
                             <span
                               className={`rounded-full px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.22em] ${
                                 plan.key === 'yearly'
-                                  ? 'bg-[#FF6B00]/15 text-[#FFB27A]'
-                                  : 'bg-white/10 text-[#d3d8e6]'
+                                  ? 'theme-billing-badge-yearly'
+                                  : 'theme-billing-badge-default'
                               }`}
                             >
                               {plan.badge}
@@ -349,7 +372,7 @@ export const BillingPage: React.FC = () => {
                           <p className="max-w-xl text-sm leading-7 text-[#aeb7cb]">
                             {plan.description}
                           </p>
-                          <p className="text-sm font-medium text-[#d9fce9]">{plan.highlight}</p>
+                          <p className="theme-billing-highlight text-sm font-medium">{plan.highlight}</p>
                         </div>
 
                         <div className="sm:w-[190px]">
@@ -369,7 +392,7 @@ export const BillingPage: React.FC = () => {
                 })}
               </div>
 
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm leading-7 text-[#9da8bf]">
+              <div className="theme-subtle-panel rounded-2xl border border-dashed p-4 text-sm leading-7 text-[#9da8bf]">
                 <p>Stripe configured: {configStatus?.stripeConfigured ? 'yes' : 'no'}</p>
                 <p>
                   Persistence ready: {configStatus?.persistenceConfigured ? 'yes' : 'no'} (

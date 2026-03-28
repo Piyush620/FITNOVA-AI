@@ -11,6 +11,9 @@ describe('AiService', () => {
     find: jest.Mock;
     countDocuments: jest.Mock;
   };
+  let mockWorkoutPlanModel: {
+    findOne: jest.Mock;
+  };
   let mockUsersService: { getCurrentUser: jest.Mock };
   let mockWorkoutsService: { createPlan: jest.Mock };
   let mockDietService: { createPlan: jest.Mock };
@@ -22,6 +25,11 @@ describe('AiService', () => {
       create: jest.fn().mockResolvedValue(undefined),
       find: jest.fn(),
       countDocuments: jest.fn(),
+    };
+    mockWorkoutPlanModel = {
+      findOne: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      }),
     };
     mockUsersService = {
       getCurrentUser: jest.fn().mockResolvedValue({
@@ -50,7 +58,7 @@ describe('AiService', () => {
 
     service = new AiService(
       mockAiInteractionModel as never,
-      {} as never,
+      mockWorkoutPlanModel as never,
       {} as never,
       {} as never,
       {
@@ -238,5 +246,50 @@ describe('AiService', () => {
       }),
     );
     expect(result.reply).toBe('Keep the next two sessions lighter.');
+  });
+
+  it('exposes which AI flows are queued versus synchronous', () => {
+    expect(service.getStatus()).toEqual(
+      expect.objectContaining({
+        executionPolicy: {
+          queued: ['workout-plan', 'diet-plan', 'adaptive-check-in'],
+          synchronous: [
+            'workout-preview',
+            'diet-preview',
+            'coach-chat',
+            'calorie-estimate',
+            'calorie-insights',
+          ],
+        },
+      }),
+    );
+  });
+
+  it('queues heavyweight plan jobs with queued execution metadata', async () => {
+    mockQueueService.enqueuePlanGenerationJob.mockResolvedValue({
+      id: 'job-123',
+      queueName: 'plan-generation',
+      name: 'workout-plan',
+    });
+
+    const result = await service.enqueuePlanJob(userId, {
+      jobName: 'workout-plan',
+      payload: { goal: 'fat loss' },
+    });
+
+    expect(mockQueueService.enqueuePlanGenerationJob).toHaveBeenCalledWith(
+      'workout-plan',
+      expect.objectContaining({
+        goal: 'fat loss',
+        userId,
+      }),
+    );
+    expect(result).toEqual({
+      queued: true,
+      jobId: 'job-123',
+      queue: 'plan-generation',
+      name: 'workout-plan',
+      executionMode: 'queued',
+    });
   });
 });
