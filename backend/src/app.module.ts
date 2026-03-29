@@ -32,12 +32,15 @@ import { WorkoutsModule } from './modules/workouts/workouts.module';
         uri: configService.get<string>('database.mongodbUri'),
       }),
     }),
-    ThrottlerModule.forRoot([
-      {
-        ttl: 60000, // 1 minute
-        limit: 100, // 100 requests per minute (general limit)
-      },
-    ]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [
+        {
+          ttl: configService.get<number>('rateLimit.globalTtl', 60000),
+          limit: configService.get<number>('rateLimit.globalLimit', 100),
+        },
+      ],
+    }),
     QueueModule,
     SystemModule,
     AuthModule,

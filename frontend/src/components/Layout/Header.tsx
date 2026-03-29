@@ -55,7 +55,7 @@ export const Header: React.FC = () => {
 
           <nav className="hidden items-center gap-3 md:flex">
             {isAuthPending ? (
-              <div className="h-10 w-48 animate-pulse rounded-xl border border-[#2e303a] bg-[#11131d]" />
+              <div className="theme-skeleton h-10 w-48 animate-pulse rounded-xl border" />
             ) : isAuthenticated ? (
               <>
                 {navItems.map((item) => (
@@ -139,7 +139,7 @@ export const Header: React.FC = () => {
         {isMenuOpen ? (
           <div className="theme-mobile-panel space-y-3 border-t py-4 md:hidden">
             {isAuthPending ? (
-              <div className="h-24 animate-pulse rounded-xl border border-[#2e303a] bg-[#11131d]" />
+              <div className="theme-skeleton h-24 animate-pulse rounded-xl border" />
             ) : isAuthenticated ? (
               <>
                 <button

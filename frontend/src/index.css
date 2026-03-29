@@ -267,6 +267,39 @@
     color: var(--theme-text-soft);
   }
 
+  .theme-heading {
+    color: var(--theme-text-strong);
+  }
+
+  .theme-copy-muted {
+    color: var(--theme-text-muted);
+  }
+
+  .theme-copy-soft {
+    color: var(--theme-text-soft);
+  }
+
+  .theme-label {
+    color: var(--theme-text-strong);
+  }
+
+  .theme-divider {
+    border-color: var(--theme-header-border);
+  }
+
+  .theme-inline-link {
+    color: var(--theme-text-strong);
+  }
+
+  .theme-inline-link:hover {
+    color: var(--primary);
+  }
+
+  .theme-skeleton {
+    border-color: var(--theme-input-border);
+    background: var(--theme-surface);
+  }
+
   .theme-footer-social:hover {
     color: var(--theme-text-strong);
   }

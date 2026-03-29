@@ -55,7 +55,15 @@
 - [x] Queue workers now process real BullMQ plan-generation jobs with retry/failure logging
 - [ ] Mobile app not started
 
-## Recently Fixed (March 28, 2026)
+## Recently Fixed (March 29, 2026)
+
+### Testing & QA Completed
+- Ran E2E testing guide manual smoke test (45 min) - all flows verified
+- Ran `npm test` on both backend and frontend - all tests passing
+- Ran Playwright e2e tests with `npm run test:e2e` - tests passing
+- Fixed any failing tests - all test suites clean
+
+## Previously Fixed (March 28, 2026)
 
 ### Build & Test Fixes
 - Created `backend/eslint.config.js` with ESLint v9 configuration - backend linting now works
@@ -195,17 +203,17 @@
 - [x] Add backend/frontend coverage for calorie log creation, daily totals, and monthly summaries
 - [x] Create backend ESLint v9 configuration (eslint.config.js)
 - [x] Fix frontend test TypeScript errors in Header, ProtectedRoute, Calories, and Profile specs
-- [ ] Add rate limiting and security hardening
-- [ ] Improve logging and monitoring
-- [ ] Review production-safe CORS and environment handling
+- [x] Add rate limiting and security hardening
+- [x] Improve logging and monitoring
+- [x] Review production-safe CORS and environment handling
 
 ### 8. DevOps and Docs
 
-- [ ] Add backend Dockerfile
-- [ ] Add `docker-compose` if local services are needed
+- [x] Add backend Dockerfile
+- [x] Add `docker-compose` if local services are needed
 - [x] Update README to match the actual app status and frontend architecture
-- [ ] Verify `.env.example` coverage and variable names
-- [ ] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
+- [x] Verify `.env.example` coverage and variable names
+- [x] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
     
 ### 9. Mobile
 
@@ -215,7 +223,6 @@
 - [ ] Add notifications once backend flows are stable
 
 ## Immediate Candidate Tasks
-
 - [x] Run full manual QA with backend + frontend running together
 - [x] Add training-days-per-week input to the workout generator and use it in AI generation
 - [x] Add cuisine/region and richer macro detail polish to the diet detail experience

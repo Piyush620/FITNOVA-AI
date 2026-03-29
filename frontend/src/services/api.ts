@@ -21,7 +21,7 @@ import type {
   CheckoutSessionResponse,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 type ApiErrorResponse = {
   message?: string | string[];

@@ -111,12 +111,12 @@ export const SignupPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+      <div className="grid min-h-[calc(100vh-12rem)] w-full gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
         <section className="flex justify-center lg:justify-start">
           <Card variant="gradient" className="w-full max-w-md space-y-6 p-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-[#F7F7F7]">Create Account</h2>
-              <p className="text-gray-400">Set up your profile and start building smarter plans.</p>
+              <h2 className="theme-heading text-3xl font-bold">Create Account</h2>
+              <p className="theme-copy-muted">Set up your profile and start building smarter plans.</p>
             </div>
 
             {(error || localError) ? (
@@ -231,13 +231,13 @@ export const SignupPage: React.FC = () => {
               </Button>
             </form>
 
-            <div className="border-t border-[#2e303a] pt-4 text-center">
-              <p className="text-sm text-gray-400">
+            <div className="theme-divider border-t pt-4 text-center">
+              <p className="theme-copy-muted text-sm">
                 Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/login')}
-                  className="font-semibold text-white transition-colors hover:text-[#00FF88]"
+                  className="theme-inline-link font-semibold transition-colors"
                 >
                   Sign in
                 </button>
@@ -251,22 +251,22 @@ export const SignupPage: React.FC = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#00FF88]">
               Join FitNova
             </p>
-            <h1 className="text-4xl font-bold text-[#F7F7F7] sm:text-5xl">
+            <h1 className="theme-heading text-4xl font-bold sm:text-5xl">
               Build your training system in one place.
             </h1>
-            <p className="max-w-xl text-base text-gray-400 sm:text-lg">
+            <p className="theme-copy-muted max-w-xl text-base sm:text-lg">
               Create personalized workout and diet plans, track adherence, and use AI support without juggling multiple apps.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="space-y-2">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Personalized plans</p>
-              <p className="text-sm text-gray-400">Generate plans that match your goal, body metrics, and available equipment.</p>
+              <p className="theme-heading text-sm font-semibold">Personalized plans</p>
+              <p className="theme-copy-muted text-sm">Generate plans that match your goal, body metrics, and available equipment.</p>
             </Card>
             <Card className="space-y-2">
-              <p className="text-sm font-semibold text-[#F7F7F7]">Track adherence</p>
-              <p className="text-sm text-gray-400">Mark sessions and meals complete and keep your dashboard up to date.</p>
+              <p className="theme-heading text-sm font-semibold">Track adherence</p>
+              <p className="theme-copy-muted text-sm">Mark sessions and meals complete and keep your dashboard up to date.</p>
             </Card>
           </div>
         </section>

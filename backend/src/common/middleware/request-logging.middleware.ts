@@ -1,6 +1,8 @@
-import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+
+import { Logger } from '../logger/logger.service';
 
 interface RequestWithCorrelationId {
   correlationId?: string;
@@ -52,16 +54,16 @@ export class RequestLoggingMiddleware implements NestMiddleware {
       const statusCode = res.statusCode ?? 200;
       const contentLength = res.getHeader?.('content-length');
 
-      Logger.log(
+      this.logger.log(
         `Outgoing response`,
-        JSON.stringify({
+        {
           correlationId,
           method,
           url,
           statusCode,
-          duration: `${duration}ms`,
+          durationMs: duration,
           contentLength,
-        }),
+        },
         'RequestLogging',
       );
     });

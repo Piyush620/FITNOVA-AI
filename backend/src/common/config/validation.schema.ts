@@ -1,9 +1,13 @@
 import * as Joi from 'joi';
 
 export const validationSchema = Joi.object({
+  NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PORT: Joi.number().default(4000),
   APP_NAME: Joi.string().default('FitNova AI'),
-  APP_ORIGIN: Joi.string().default('http://localhost:3000,http://localhost:5173'),
+  APP_ORIGIN: Joi.string().min(1).default('http://localhost:3000,http://localhost:5173'),
+  APP_TRUST_PROXY: Joi.boolean().truthy('true').falsy('false').default(false),
+  SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
+  CORS_ALLOW_LOCALHOST: Joi.boolean().truthy('true').falsy('false').default(true),
   MONGODB_URI: Joi.string().required(),
   JWT_ACCESS_SECRET: Joi.string().min(16).required(),
   JWT_ACCESS_TTL: Joi.string().required(),
@@ -26,4 +30,10 @@ export const validationSchema = Joi.object({
   STRIPE_PRICE_MONTHLY: Joi.string().allow('', null),
   STRIPE_PRICE_YEARLY: Joi.string().allow('', null),
   POSTGRES_URL: Joi.string().allow('', null),
+  GLOBAL_RATE_LIMIT_TTL: Joi.number().min(1000).default(60000),
+  GLOBAL_RATE_LIMIT: Joi.number().min(1).default(100),
+  AI_RATE_LIMIT_TTL: Joi.number().min(1000).default(60000),
+  AI_RATE_LIMIT: Joi.number().min(1).default(12),
+  LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'debug', 'verbose').default('debug'),
+  LOG_TO_FILES: Joi.boolean().truthy('true').falsy('false').default(false),
 });

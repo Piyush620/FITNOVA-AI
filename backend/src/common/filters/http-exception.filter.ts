@@ -36,6 +36,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(
         `Request failed [${request.method} ${request.url}]`,
         exception instanceof Error ? exception.stack : undefined,
+        {
+          statusCode: status,
+          method: request.method,
+          path: request.url,
+          correlationId:
+            (request as FastifyRequest & { correlationId?: string }).correlationId ?? 'n/a',
+          ip: request.ip,
+        },
       );
     }
 

@@ -46,19 +46,19 @@ export const LoginPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="grid w-full gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <div className="grid min-h-[calc(100vh-12rem)] w-full gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <section className="space-y-6 py-6 lg:py-0">
           <div className="space-y-4">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#00FF88]">
               Welcome Back
             </p>
-            <h1 className="text-4xl font-black leading-[0.95] text-[#F7F7F7] sm:text-6xl">
+            <h1 className="theme-heading text-4xl font-black leading-[0.95] sm:text-6xl">
               Re-enter your
               <span className="block bg-[linear-gradient(90deg,#00FF88_0%,#F4FFF9_55%,#FF6B00_100%)] bg-clip-text text-transparent">
                 performance zone.
               </span>
             </h1>
-            <p className="max-w-xl text-base text-gray-400 sm:text-lg">
+            <p className="theme-copy-muted max-w-xl text-base sm:text-lg">
               Review your plans, track completed sessions, and keep the momentum sharp with a cleaner, more intense command-center feel.
             </p>
           </div>
@@ -127,8 +127,8 @@ export const LoginPage: React.FC = () => {
         <section className="flex justify-center lg:justify-end">
           <Card variant="gradient" className="w-full max-w-md space-y-6 p-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-[#F7F7F7]">Sign In</h2>
-              <p className="text-gray-400">Enter your account details to continue.</p>
+              <h2 className="theme-heading text-3xl font-bold">Sign In</h2>
+              <p className="theme-copy-muted">Enter your account details to continue.</p>
             </div>
 
             {(error || localError) ? (
@@ -159,13 +159,13 @@ export const LoginPage: React.FC = () => {
               </Button>
             </form>
 
-            <div className="border-t border-[#2e303a] pt-4 text-center">
-              <p className="text-sm text-gray-400">
+            <div className="theme-divider border-t pt-4 text-center">
+              <p className="theme-copy-muted text-sm">
                 Don&apos;t have an account?{' '}
                 <button
                   type="button"
                   onClick={() => navigate('/signup')}
-                  className="font-semibold text-white transition-colors hover:text-[#00FF88]"
+                  className="theme-inline-link font-semibold transition-colors"
                 >
                   Sign up
                 </button>

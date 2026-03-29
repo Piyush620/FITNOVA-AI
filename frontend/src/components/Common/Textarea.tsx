@@ -16,7 +16,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
     return (
       <div className="w-full space-y-2">
-        {label ? <label htmlFor={textareaId} className="block text-sm font-medium text-[#F7F7F7]">{label}</label> : null}
+        {label ? <label htmlFor={textareaId} className="theme-label block text-sm font-medium">{label}</label> : null}
         <textarea
           ref={ref}
           id={textareaId}
@@ -31,7 +31,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error ? <p id={errorId} className="text-sm text-[#FF6B00]">{error}</p> : null}
-        {helperText && !error ? <p id={descriptionId} className="text-sm text-gray-400">{helperText}</p> : null}
+        {helperText && !error ? <p id={descriptionId} className="theme-copy-muted text-sm">{helperText}</p> : null}
       </div>
     );
   }

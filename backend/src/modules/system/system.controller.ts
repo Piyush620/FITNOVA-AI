@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectConnection } from '@nestjs/mongoose';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Connection } from 'mongoose';
 
 import { Public } from 'src/common/decorators/public.decorator';
 import { QueueService } from 'src/modules/queue/queue.service';
@@ -11,6 +13,7 @@ export class SystemController {
   constructor(
     private readonly configService: ConfigService,
     private readonly queueService: QueueService,
+    @InjectConnection() private readonly mongoConnection: Connection,
   ) {}
 
   @Public()
@@ -30,14 +33,29 @@ export class SystemController {
   @Get('health')
   @ApiOperation({ summary: 'Get API health summary' })
   getHealth() {
+    const mongoReadyState = this.mongoConnection.readyState;
+
     return {
-      status: 'ok',
+      status: mongoReadyState === 1 ? 'ok' : 'degraded',
       services: {
         api: 'up',
-        mongodb: 'connected',
+        mongodb: this.mapMongoStatus(mongoReadyState),
         redisQueue: this.queueService.getStatus(),
       },
       timestamp: new Date().toISOString(),
     };
+  }
+
+  private mapMongoStatus(readyState: number) {
+    switch (readyState) {
+      case 1:
+        return 'connected';
+      case 2:
+        return 'connecting';
+      case 3:
+        return 'disconnecting';
+      default:
+        return 'disconnected';
+    }
   }
 }

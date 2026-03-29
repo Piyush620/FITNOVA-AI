@@ -380,6 +380,34 @@ curl -X POST http://localhost:4000/api/v1/ai/generate-and-save-workout-plan \
 
 ## Automated Tests (Bonus)
 
+### Run Mocked Browser E2E
+```bash
+cd frontend
+npm run test:e2e
+```
+
+This uses Playwright with mocked API responses and verifies the main browser journey:
+- signup
+- dashboard load
+- workout generation flow
+- diet generation flow
+- calorie logging flow
+
+### Run Live Browser Smoke E2E
+Make sure backend and frontend are already running locally, then set credentials for a real test user:
+
+```bash
+set FITNOVA_E2E_LIVE_EMAIL=your_test_user@example.com
+set FITNOVA_E2E_LIVE_PASSWORD=your_test_password
+cd frontend
+npm run test:e2e:live
+```
+
+This hits the real local stack and currently validates:
+- login
+- dashboard load
+- workouts route load
+
 ### Run Backend Tests
 ```bash
 cd backend

@@ -38,7 +38,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={selectId} className="mb-2 block text-sm font-medium text-[#F7F7F7]">
+        <label htmlFor={selectId} className="theme-label mb-2 block text-sm font-medium">
           {label}
         </label>
       )}
@@ -77,7 +77,7 @@ export const Select: React.FC<SelectProps> = ({
         <p id={errorId} className="mt-1.5 text-xs font-medium text-[#FF6B00]">{error}</p>
       )}
       {helperText && !error && (
-        <p id={descriptionId} className="mt-1.5 text-xs text-[#a0a0a0]">{helperText}</p>
+        <p id={descriptionId} className="theme-copy-muted mt-1.5 text-xs">{helperText}</p>
       )}
     </div>
   );

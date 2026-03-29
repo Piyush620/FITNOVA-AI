@@ -1,4 +1,4 @@
-import { Logger as NestLogger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 import * as winston from 'winston';
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
@@ -14,26 +14,23 @@ const customFormat = printf(
   },
 );
 
-const loggerInstance = winston.createLogger({
-  format: combine(
-    colorize(),
-    errors({ stack: true }),
-    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    customFormat,
-  ),
-  defaultMeta: { service: 'fitnova-api' },
-  transports: [
-    new winston.transports.Console({
-      format: combine(
-        colorize(),
-        printf(({ level, message, timestamp: ts, ...meta }) => {
-          const metaStr = Object.keys(meta).length
-            ? ` ${JSON.stringify(meta)}`
-            : '';
-          return `[${ts}] [${level}] ${message}${metaStr}`;
-        }),
-      ),
-    }),
+const shouldWriteLogsToFiles = process.env.LOG_TO_FILES === 'true';
+const transports: winston.transport[] = [
+  new winston.transports.Console({
+    format: combine(
+      colorize(),
+      printf(({ level, message, timestamp: ts, ...meta }) => {
+        const metaStr = Object.keys(meta).length
+          ? ` ${JSON.stringify(meta)}`
+          : '';
+        return `[${ts}] [${level}] ${message}${metaStr}`;
+      }),
+    ),
+  }),
+];
+
+if (shouldWriteLogsToFiles) {
+  transports.push(
     new winston.transports.File({
       filename: 'logs/error.log',
       level: 'error',
@@ -51,10 +48,21 @@ const loggerInstance = winston.createLogger({
         customFormat,
       ),
     }),
-  ],
+  );
+}
+
+const loggerInstance = winston.createLogger({
+  format: combine(
+    colorize(),
+    errors({ stack: true }),
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    customFormat,
+  ),
+  defaultMeta: { service: 'fitnova-api' },
+  transports,
 });
 
-export class Logger extends NestLogger {
+export class Logger extends ConsoleLogger {
   private extractLogPayload(optionalParams: unknown[]) {
     const payload: Record<string, unknown> = {};
     let context: string | undefined;

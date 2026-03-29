@@ -28,7 +28,7 @@ This repository currently contains:
 - a working NestJS + Fastify backend
 - a working React web frontend
 - working Stripe billing wiring backed by MongoDB persistence
-- scaffolded queue modules that are not live yet
+- working BullMQ queue processing for heavyweight AI jobs
 
 ## Cross-Feature Sync
 
@@ -63,7 +63,7 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 - `calorie-logs`
 - `ai`
 - `subscriptions`
-- `queue` scaffold
+- `queue`
 - `system`
 
 ## Current Stack
@@ -89,7 +89,6 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 
 ### Still scaffold-only
 
-- Redis/BullMQ workers
 - Mobile app
 
 ## API Quick Links
@@ -117,6 +116,7 @@ FitNova AI/
 |   |       |-- users/
 |   |       `-- workouts/
 |   |-- package.json
+|   |-- Dockerfile
 |   `-- .env.example
 |-- frontend/
 |   |-- src/
@@ -131,6 +131,7 @@ FitNova AI/
 |   |   `-- main.tsx
 |   |-- package.json
 |   `-- .env.example
+|-- docker-compose.yml
 |-- README.md
 `-- TODO.md
 ```
@@ -139,14 +140,82 @@ FitNova AI/
 
 ### Prerequisites
 
-- Node.js 18+
-- npm
-- MongoDB Atlas or local MongoDB
+- Docker Desktop or Docker Engine with Compose
+- Node.js 18+ and npm only if you also want to run parts of the stack outside Docker
 - Gemini API key or OpenAI API key for AI flows
 
 Optional for scaffold work only:
-- Redis
 - Stripe keys
+- PostgreSQL URL only if you extend the placeholder integration path
+
+### Full Docker stack
+
+The root `docker-compose.yml` now runs the full app stack:
+
+- `frontend` on `http://localhost`
+- `backend` on `http://localhost:4000/api/v1`
+- Swagger docs on `http://localhost:4000/api/v1/docs`
+- MongoDB on `mongodb://localhost:27017/fitnova-ai`
+- Redis on `redis://localhost:6379`
+
+Start everything:
+
+```bash
+docker compose up --build
+```
+
+Run detached if you prefer:
+
+```bash
+docker compose up --build -d
+```
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Remove containers plus named data volumes:
+
+```bash
+docker compose down -v
+```
+
+### Docker environment overrides
+
+The compose file includes safe local defaults so the project can boot without extra files, but you should override secrets and provider keys before using real integrations.
+
+Useful examples:
+- [backend/.env.docker.example](/c:/Users/admin/Desktop/FitNova%20AI/backend/.env.docker.example)
+- [frontend/.env.docker.example](/c:/Users/admin/Desktop/FitNova%20AI/frontend/.env.docker.example)
+
+Compose reads variables from your shell or a root `.env` file automatically. Common overrides:
+
+```env
+JWT_ACCESS_SECRET=replace_this_with_a_real_secret
+JWT_REFRESH_SECRET=replace_this_with_a_real_secret
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
+# or
+AI_PROVIDER=openai
+OPENAI_API_KEY=your_openai_api_key
+VITE_API_URL=/api/v1
+```
+
+### Infrastructure-only mode
+
+If you only want MongoDB and Redis while running frontend/backend locally:
+
+```bash
+docker compose up -d mongodb redis
+```
+
+Stop the services with:
+
+```bash
+docker compose stop mongodb redis
+```
 
 ### Backend setup
 
@@ -154,6 +223,20 @@ Optional for scaffold work only:
 cd backend
 npm install
 npm run start:dev
+```
+
+### Backend container build
+
+```bash
+docker build -t fitnova-backend ./backend
+docker run --env-file ./backend/.env -p 4000:4000 fitnova-backend
+```
+
+If the backend runs in Docker while MongoDB or Redis run on your host machine, do not leave `localhost` inside the backend container env file. Use host-reachable values such as:
+
+```env
+MONGODB_URI=mongodb://host.docker.internal:27017/fitnova-ai
+REDIS_HOST=host.docker.internal
 ```
 
 Available commands:
@@ -185,7 +268,7 @@ npm run preview
 
 ### Local URLs
 
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost` in Docker, `http://localhost:5173` in local Vite dev
 - Backend: `http://localhost:4000/api/v1`
 - Swagger: `http://localhost:4000/api/v1/docs`
 
@@ -198,9 +281,13 @@ Create `.env.local` or `.env` files in both apps.
 ```env
 MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/fitnova
 
+NODE_ENV=development
 PORT=4000
 APP_NAME=FitNova AI
 APP_ORIGIN=http://localhost:5173,http://localhost:3000
+APP_TRUST_PROXY=false
+SWAGGER_ENABLED=true
+CORS_ALLOW_LOCALHOST=true
 
 JWT_ACCESS_SECRET=your_secure_access_secret
 JWT_ACCESS_TTL=15m
@@ -214,24 +301,44 @@ GEMINI_MODEL=gemini-2.5-flash
 
 # Optional OpenAI path
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4-turbo-preview
+OPENAI_MODEL=gpt-4.1-mini
 
 # Optional queue scaffold
 REDIS_ENABLED=false
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
+REDIS_USERNAME=
+REDIS_PASSWORD=
+REDIS_DB=0
 
 # Optional billing
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_MONTHLY=price_...
 STRIPE_PRICE_YEARLY=price_...
+
+# Optional future relational integration
+POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/fitnova
+
+# Rate limiting and logging
+GLOBAL_RATE_LIMIT_TTL=60000
+GLOBAL_RATE_LIMIT=100
+AI_RATE_LIMIT_TTL=60000
+AI_RATE_LIMIT=12
+LOG_LEVEL=debug
+LOG_TO_FILES=false
 ```
 
 ### Frontend
 
 ```env
 VITE_API_URL=http://localhost:4000/api/v1
+```
+
+For Docker + Nginx, use:
+
+```env
+VITE_API_URL=/api/v1
 ```
 
 ## Usage Notes
@@ -285,13 +392,54 @@ npm run build
 cd frontend
 npm run lint
 npm run test
+npm run test:e2e
+npm run test:e2e:live
 npx tsc --noEmit
 npm run build
 ```
 
+`npm run test:e2e` runs the mocked browser journey.
+
+`npm run test:e2e:live` runs the live local-stack smoke test and expects:
+
+```bash
+set FITNOVA_E2E_LIVE_EMAIL=your_test_user@example.com
+set FITNOVA_E2E_LIVE_PASSWORD=your_test_password
+```
+
+Run it only when the backend and frontend are already running with reachable local services.
+
+## Provider Setup Notes
+
+### MongoDB
+
+- Local Docker Compose default: `mongodb://localhost:27017/fitnova-ai`
+- MongoDB Atlas also works if `MONGODB_URI` points to a reachable cluster
+- If the backend fails early, verify MongoDB connectivity before debugging most other startup paths
+
+### Redis / BullMQ
+
+- Enable queue processing with `REDIS_ENABLED=true`
+- Use `REDIS_HOST=127.0.0.1` and `REDIS_PORT=6379` for the provided local compose stack
+- Workout plan saves, diet plan saves, and adaptive check-ins can run through BullMQ
+
+### PostgreSQL
+
+- `POSTGRES_URL` is currently optional and reserved for future relational integrations
+- The current production-critical app flows do not require PostgreSQL
+
+### Stripe
+
+- Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, and `STRIPE_PRICE_YEARLY`
+- Keep Stripe in test mode for local development
+- Forward webhooks locally if you want end-to-end Stripe event testing:
+
+```bash
+stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
+```
+
 ## Current Gaps
 
-- Queue workers are scaffolded, not active
 - Backend integration coverage is still incomplete
 - Broader frontend integration coverage is still incomplete
 - Mobile app has not started
@@ -310,10 +458,12 @@ npm run build
 - Check `MONGODB_URI`
 - Check AI provider keys
 - Verify port `4000` is free
+- Leave `LOG_TO_FILES=false` unless you explicitly want local log files in `backend/logs`
 
 ### Frontend can't reach API
 
 - Check `VITE_API_URL`
+- In Docker, prefer `VITE_API_URL=/api/v1`
 - Verify backend is running on port `4000`
 - Check CORS origin settings in backend config
 
