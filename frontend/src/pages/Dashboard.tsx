@@ -7,7 +7,6 @@ import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage, usersAPI } from '../services/api';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 import type { DashboardSummary } from '../types';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -19,7 +18,6 @@ export const DashboardPage: React.FC = () => {
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [heroImageSrc, setHeroImageSrc] = useState(heroImage);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -42,12 +40,31 @@ export const DashboardPage: React.FC = () => {
     };
 
     void fetchDashboard();
-  }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    const avatarUrl = user?.profile?.avatarUrl?.trim();
-    setHeroImageSrc(avatarUrl ? avatarUrl : heroImage);
-  }, [user?.profile?.avatarUrl]);
+    const handleFocus = () => {
+      void fetchDashboard();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'fitnova-calories-sync') {
+        void fetchDashboard();
+      }
+    };
+
+    const handleCaloriesSync = () => {
+      void fetchDashboard();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('fitnova:calories-sync', handleCaloriesSync);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('fitnova:calories-sync', handleCaloriesSync);
+    };
+  }, [isAuthenticated, navigate]);
 
   if (!isAuthenticated) {
     return null;
@@ -142,16 +159,8 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
-              <div className="relative min-h-[520px] lg:min-h-[620px]">
-                <img
-                  src={heroImageSrc}
-                  alt="Dashboard energy"
-                  className="h-full w-full object-cover"
-                  onError={() => setHeroImageSrc(heroImage)}
-                />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+            <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
+              <div className="flex min-h-[520px] flex-col gap-5 p-6 lg:min-h-[620px]">
                   <div>
                     <div className="theme-media-chip inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                       This week
@@ -164,22 +173,22 @@ export const DashboardPage: React.FC = () => {
 
                   <div className="mt-auto space-y-4 pt-2">
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-sm">Workouts completed</p>
                         <p className="theme-media-heading mt-2 text-2xl font-bold">{dashboard?.completedWorkoutsThisWeek ?? 0}</p>
                       </div>
-                      <div className="theme-media-panel theme-media-panel-accent rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel theme-media-panel-accent rounded-2xl border p-4">
                         <p className="theme-media-copy text-sm">Today&apos;s calories</p>
                         <p className="theme-media-heading mt-2 text-2xl font-bold">{dashboard?.todaysCalories ?? 0}</p>
                         <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#00FF88]">
                           Target {effectiveCalorieTarget} kcal
                         </p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-sm">Goal</p>
                         <p className="theme-media-heading mt-2 text-lg font-semibold capitalize">{dashboard?.goal ?? 'General fitness'}</p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-sm">Calories left</p>
                         <p className={`mt-2 text-lg font-semibold ${remainingCalories >= 0 ? 'text-[#00FF88]' : 'text-[#FF6B00]'}`}>
                           {dashboard ? `${remainingCalories}` : 'N/A'}
@@ -214,7 +223,6 @@ export const DashboardPage: React.FC = () => {
                       </Button>
                     </div>
                   </div>
-                </div>
               </div>
             </Card>
           </div>
@@ -257,9 +265,9 @@ export const DashboardPage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4 rounded-2xl border border-dashed border-[#2e303a] bg-[#0F1320] p-5">
-                    <p className="text-lg font-semibold text-[#F7F7F7]">No active workout plan yet</p>
-                    <p className="text-sm leading-6 text-gray-400">
+                  <div className="theme-dashboard-empty-state space-y-4 rounded-2xl border border-dashed p-5">
+                    <p className="theme-dashboard-empty-title text-lg font-semibold">No active workout plan yet</p>
+                    <p className="theme-dashboard-empty-copy text-sm leading-6">
                       Start with an AI plan based on your goal, training days, and equipment so the dashboard can begin tracking real momentum.
                     </p>
                     <Button fullWidth onClick={() => navigate('/workouts')}>
@@ -297,9 +305,9 @@ export const DashboardPage: React.FC = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4 rounded-2xl border border-dashed border-[#2e303a] bg-[#0F1320] p-5">
-                    <p className="text-lg font-semibold text-[#F7F7F7]">No active diet plan yet</p>
-                    <p className="text-sm leading-6 text-gray-400">
+                  <div className="theme-dashboard-empty-state space-y-4 rounded-2xl border border-dashed p-5">
+                    <p className="theme-dashboard-empty-title text-lg font-semibold">No active diet plan yet</p>
+                    <p className="theme-dashboard-empty-copy text-sm leading-6">
                       Build a guided meal week with your cuisine style, food preference, and target timeline so your nutrition progress becomes visible here.
                     </p>
                     <Button fullWidth onClick={() => navigate('/diet')}>

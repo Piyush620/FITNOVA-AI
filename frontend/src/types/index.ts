@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   email: string;
+  isEmailVerified?: boolean;
   roles: Array<'user' | 'admin'>;
   subscription?: SubscriptionSummary;
   profile: {
@@ -72,6 +73,17 @@ export interface RegisterPayload {
   weightKg?: number;
   goal?: string;
   activityLevel?: string;
+}
+
+export interface PendingVerificationResponse {
+  email: string;
+  verificationRequired: boolean;
+  message: string;
+}
+
+export interface VerifyEmailOtpPayload {
+  email: string;
+  otp: string;
 }
 
 export interface AuthTokens {

@@ -38,6 +38,7 @@
 - [x] Shared `Textarea` component added and wired into profile/coach flows
 - [x] Frontend smoke coverage added for header profile navigation and profile page rendering
 - [x] README refreshed to match current app capabilities
+- [x] README/TODO refreshed to match Docker-first env usage and OTP auth flow
 - [x] Landing, login, dashboard, profile, workouts, and diet pages now share a stronger bold visual direction
 - [x] Image-backed hero sections are used across key frontend surfaces
 - [x] Live calorie tracking with AI food estimation, confirm-and-save flow, daily totals, monthly summaries, and recommendations
@@ -47,6 +48,12 @@
 - [x] Calorie tracker uses goal-based estimated calories before any active diet plan exists
 - [x] Active diet plan calories now override the tracker target directly
 - [x] Calories page follows the next unfinished active diet meal slot
+- [x] Signup now uses email OTP verification with Gmail SMTP / Nodemailer delivery
+- [x] Docker-first app config is consolidated into one root `.env`
+- [x] Dashboard/profile now refresh when calorie data changes
+- [x] Calories page labels target values from the correct source (diet day, diet plan, workout, or goal)
+- [x] Diet page now fetches the real active plan instead of inferring it only from the current list page
+- [x] Scroll performance reduced by toning down expensive ambient animation/blur effects
 - [x] Diet generation now uses the active workout split to shape day calories and recovery meal structure
 - [x] Calorie tracker now returns workout-aware daily target context and source messaging
 - [x] Workout detail flow now links directly into building a matching diet
@@ -214,6 +221,7 @@
 - [x] Update README to match the actual app status and frontend architecture
 - [x] Verify `.env.example` coverage and variable names
 - [x] Add setup notes for MongoDB, PostgreSQL, Redis, and Stripe
+- [x] Consolidate runtime env usage around the root `.env` for Docker Compose
     
 ### 9. Mobile
 
@@ -264,6 +272,7 @@
 - Billing checkout, webhook verification, and MongoDB subscription persistence now work in local Stripe test mode
 - Premium feature gating is enforced for the AI/billing-protected product flows currently implemented
 - The calorie tracker now estimates calories on its own before diet-plan creation, switches to the active diet target afterward, and can expose workout-adjusted daily context when diet data is not present
+- Calories can legitimately differ by date because the tracker follows the selected day's active diet-day target, not one fixed plan-wide number
 - Diet generation is now intentionally linked to the active workout split so nutrition structure follows training demand more closely
 - Visual styling is much stronger across the app, but broader frontend QA and test coverage are still worth expanding
 - `.env` files should remain untracked

@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  BadRequestException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -15,7 +16,10 @@ import { Role } from 'src/common/enums/role.enum';
 import { SubscriptionsService } from 'src/modules/subscriptions/subscriptions.service';
 
 import { LoginDto } from './dto/login.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
 import { RegisterDto } from './dto/register.dto';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
+import { EmailService } from './email.service';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { User, UserDocument } from './schemas/user.schema';
 
@@ -26,6 +30,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(payload: RegisterDto) {
@@ -35,10 +40,16 @@ export class AuthService {
     }
 
     const passwordHash = await this.hashValue(payload.password);
+    const otp = this.generateOtp();
+    const otpExpiresAt = this.createOtpExpiry();
     const user = await this.userModel.create({
       email: payload.email.toLowerCase(),
       passwordHash,
       roles: [Role.USER],
+      isEmailVerified: false,
+      emailVerificationOtpHash: await this.hashValue(otp),
+      emailVerificationOtpExpiresAt: otpExpiresAt,
+      emailVerificationSentAt: new Date(),
       profile: {
         fullName: payload.fullName,
         age: payload.age,
@@ -50,7 +61,18 @@ export class AuthService {
       },
     });
 
-    return this.buildAuthResponse(user);
+    await this.emailService.sendEmailVerificationOtp(
+      user.email,
+      user.profile.fullName,
+      otp,
+      this.getOtpTtlMinutes(),
+    );
+
+    return {
+      email: user.email,
+      verificationRequired: true,
+      message: 'Account created. Enter the OTP sent to your email to verify your account.',
+    };
   }
 
   async login(payload: LoginDto) {
@@ -66,7 +88,78 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Please verify your email before logging in.');
+    }
+
     return this.buildAuthResponse(user);
+  }
+
+  async verifyEmailOtp(payload: VerifyEmailOtpDto) {
+    const user = await this.userModel
+      .findOne({ email: payload.email.toLowerCase() })
+      .select('+passwordHash +refreshTokenHash +emailVerificationOtpHash +emailVerificationOtpExpiresAt');
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (user.isEmailVerified) {
+      return this.buildAuthResponse(user);
+    }
+
+    if (!user.emailVerificationOtpHash || !user.emailVerificationOtpExpiresAt) {
+      throw new BadRequestException('Verification code is not available. Request a new OTP.');
+    }
+
+    if (user.emailVerificationOtpExpiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('Verification code has expired. Request a new OTP.');
+    }
+
+    const isOtpValid = await bcrypt.compare(payload.otp, user.emailVerificationOtpHash);
+    if (!isOtpValid) {
+      throw new BadRequestException('Invalid verification code.');
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationOtpHash = undefined;
+    user.emailVerificationOtpExpiresAt = undefined;
+    user.emailVerifiedAt = new Date();
+
+    return this.buildAuthResponse(user);
+  }
+
+  async resendEmailOtp(payload: ResendEmailOtpDto) {
+    const user = await this.userModel
+      .findOne({ email: payload.email.toLowerCase() })
+      .select('+emailVerificationOtpHash +emailVerificationOtpExpiresAt');
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified.');
+    }
+
+    const otp = this.generateOtp();
+    user.emailVerificationOtpHash = await this.hashValue(otp);
+    user.emailVerificationOtpExpiresAt = this.createOtpExpiry();
+    user.emailVerificationSentAt = new Date();
+    await user.save();
+
+    await this.emailService.sendEmailVerificationOtp(
+      user.email,
+      user.profile.fullName,
+      otp,
+      this.getOtpTtlMinutes(),
+    );
+
+    return {
+      email: user.email,
+      verificationRequired: true,
+      message: 'A new verification OTP has been sent to your email.',
+    };
   }
 
   async refreshTokens(userId: string, refreshToken: string) {
@@ -121,6 +214,7 @@ export class AuthService {
         email: user.email,
         roles: user.roles,
         profile: user.profile,
+        isEmailVerified: user.isEmailVerified,
         subscription,
       },
       tokens,
@@ -145,5 +239,17 @@ export class AuthService {
   private async hashValue(value: string) {
     const saltRounds = this.configService.get<number>('auth.bcryptSaltRounds', 12);
     return bcrypt.hash(value, saltRounds);
+  }
+
+  private generateOtp() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  private getOtpTtlMinutes() {
+    return this.configService.get<number>('auth.emailVerificationOtpTtlMinutes', 10);
+  }
+
+  private createOtpExpiry() {
+    return new Date(Date.now() + this.getOtpTtlMinutes() * 60_000);
   }
 }

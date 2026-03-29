@@ -22,6 +22,15 @@ export default () => ({
     refreshSecret: process.env.JWT_REFRESH_SECRET ?? 'change_me_refresh_secret',
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '30d',
     bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS ?? 12),
+    emailVerificationOtpTtlMinutes: Number(process.env.EMAIL_VERIFICATION_OTP_TTL_MINUTES ?? 10),
+  },
+  email: {
+    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT ?? 465),
+    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : true,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.EMAIL_FROM ?? process.env.SMTP_USER,
   },
   ai: {
     provider: process.env.AI_PROVIDER ?? 'gemini',

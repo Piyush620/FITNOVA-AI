@@ -40,27 +40,34 @@ services:
       redis:
         condition: service_healthy
     environment:
-      NODE_ENV: production
-      PORT: 4000
-      APP_NAME: FitNova AI
-      APP_ORIGIN: http://localhost
-      APP_TRUST_PROXY: "true"
-      SWAGGER_ENABLED: "true"
-      CORS_ALLOW_LOCALHOST: "true"
-      MONGODB_URI: mongodb://mongodb:27017/fitnova-ai
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-4000}
+      APP_NAME: ${APP_NAME:-FitNova AI}
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost}
+      APP_TRUST_PROXY: ${APP_TRUST_PROXY:-true}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      CORS_ALLOW_LOCALHOST: ${CORS_ALLOW_LOCALHOST:-true}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/fitnova-ai}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-fitnova_local_access_secret_change_me}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-fitnova_local_refresh_secret_change_me}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
       BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-12}
+      EMAIL_VERIFICATION_OTP_TTL_MINUTES: ${EMAIL_VERIFICATION_OTP_TTL_MINUTES:-10}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
       AI_PROVIDER: ${AI_PROVIDER:-gemini}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
       REDIS_ENABLED: ${REDIS_ENABLED:-true}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_USERNAME: ${REDIS_USERNAME:-}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REDIS_DB: ${REDIS_DB:-0}
@@ -74,7 +81,7 @@ services:
       AI_RATE_LIMIT_TTL: ${AI_RATE_LIMIT_TTL:-60000}
       AI_RATE_LIMIT: ${AI_RATE_LIMIT:-12}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOG_TO_FILES: "false"
+      LOG_TO_FILES: ${LOG_TO_FILES:-false}
     ports:
       - "4000:4000"
     healthcheck:

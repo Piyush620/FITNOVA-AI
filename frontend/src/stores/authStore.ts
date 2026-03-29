@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
-import type { User, AuthTokens } from '../types';
+import type { User, AuthTokens, PendingVerificationResponse } from '../types';
 import { authAPI, getApiErrorMessage } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 
@@ -31,7 +31,9 @@ interface AuthState {
     weightKg?: number;
     goal?: string;
     activityLevel?: string;
-  }) => Promise<void>;
+  }) => Promise<PendingVerificationResponse>;
+  verifyEmailOtp: (email: string, otp: string) => Promise<void>;
+  resendEmailOtp: (email: string) => Promise<PendingVerificationResponse>;
   logout: () => void;
   getCurrentUser: () => Promise<void>;
   clearError: () => void;
@@ -102,6 +104,27 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authAPI.register(payload);
+          set({ isLoading: false });
+          toastSuccess('Account created. Check your email for the verification OTP.');
+          return response.data;
+        } catch (error) {
+          const message = axios.isAxiosError<ApiErrorResponse>(error)
+            ? getApiErrorMessage(error.response?.data?.message)
+            : undefined;
+          const errorMsg = message || 'Registration failed';
+          set({
+            error: errorMsg,
+            isLoading: false,
+          });
+          toastError(errorMsg);
+          throw error;
+        }
+      },
+
+      verifyEmailOtp: async (email: string, otp: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authAPI.verifyEmail({ email, otp });
           const {
             user,
             tokens: { accessToken, refreshToken },
@@ -118,12 +141,33 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             localStorage.setItem('refreshToken', refreshToken);
           }
-          toastSuccess('Account created! Welcome to FitNova.');
+          toastSuccess('Email verified. Welcome to FitNova.');
         } catch (error) {
           const message = axios.isAxiosError<ApiErrorResponse>(error)
             ? getApiErrorMessage(error.response?.data?.message)
             : undefined;
-          const errorMsg = message || 'Registration failed';
+          const errorMsg = message || 'Verification failed';
+          set({
+            error: errorMsg,
+            isLoading: false,
+          });
+          toastError(errorMsg);
+          throw error;
+        }
+      },
+
+      resendEmailOtp: async (email: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authAPI.resendEmailOtp(email);
+          set({ isLoading: false });
+          toastSuccess('A fresh OTP has been sent to your email.');
+          return response.data;
+        } catch (error) {
+          const message = axios.isAxiosError<ApiErrorResponse>(error)
+            ? getApiErrorMessage(error.response?.data?.message)
+            : undefined;
+          const errorMsg = message || 'Could not resend OTP';
           set({
             error: errorMsg,
             isLoading: false,

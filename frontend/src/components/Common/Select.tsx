@@ -54,7 +54,7 @@ export const Select: React.FC<SelectProps> = ({
           error
             ? 'border-[#ff8fbe] focus:border-[#ff8fbe] focus:ring-[#ff8fbe]/30'
             : 'border-white/10 focus:border-[#8ef7c7]/55 focus:ring-[#cab8ff]/25'
-        } px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-300 focus:outline-none focus:ring-2 ${
+        } px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow,background,color] duration-200 focus:outline-none focus:ring-2 ${
           disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
         } ${className}`}
       >

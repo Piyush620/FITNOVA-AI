@@ -6,8 +6,10 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { LoginDto } from './dto/login.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
 import { RefreshJwtAuthGuard } from './guards/refresh-jwt-auth.guard';
 import { AuthService } from './auth.service';
 
@@ -22,6 +24,24 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user account' })
   async register(@Body() payload: RegisterDto) {
     return this.authService.register(payload);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('verify-email')
+  @Throttle({ default: { limit: 10, ttl: 600000 } })
+  @ApiOperation({ summary: 'Verify email with one-time password' })
+  async verifyEmail(@Body() payload: VerifyEmailOtpDto) {
+    return this.authService.verifyEmailOtp(payload);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Post('resend-email-otp')
+  @Throttle({ default: { limit: 5, ttl: 600000 } })
+  @ApiOperation({ summary: 'Resend email verification OTP' })
+  async resendEmailOtp(@Body() payload: ResendEmailOtpDto) {
+    return this.authService.resendEmailOtp(payload);
   }
 
   @Public()

@@ -7,8 +7,8 @@ import { useAuth } from '../hooks/useAuth';
 import { aiAPI, caloriesAPI, dietAPI, getApiErrorMessage } from '../services/api';
 import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, DietPlan, Meal, MonthlyCalorieSummary } from '../types';
 import { estimateGoalCalories } from '../utils/calorieTarget';
+import { notifyCaloriesChanged } from '../utils/appSync';
 import { toastError, toastSuccess } from '../utils/toast';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = { message?: string | string[] };
 type LogMode = 'ai' | 'manual';
@@ -27,6 +27,7 @@ const monthNow = () => new Date().toISOString().slice(0, 7);
 const emptyManual = (loggedDate: string): ManualForm => ({ loggedDate, mealType: 'breakfast', title: '', calories: '', proteinGrams: '', carbsGrams: '', fatsGrams: '', notes: '' });
 const mealTypeOptions = [{ value: 'breakfast', label: 'Breakfast' }, { value: 'mid-morning', label: 'Mid-Morning' }, { value: 'lunch', label: 'Lunch' }, { value: 'evening-snack', label: 'Evening Snack' }, { value: 'dinner', label: 'Dinner' }, { value: 'post-workout', label: 'Post-Workout' }, { value: 'other', label: 'Other' }];
 const formatDateLabel = (value: string) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
+const formatMonthLabel = (value: string) => new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(`${value}-01T00:00:00`));
 const formatMealLabel = (value: CalorieLog['mealType']) => value.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 const formatTargetSource = (value?: DailyCalorieLogResponse['targetSource']) => {
   switch (value) {
@@ -38,6 +39,19 @@ const formatTargetSource = (value?: DailyCalorieLogResponse['targetSource']) => 
       return 'Using workout-adjusted estimate';
     default:
       return 'Using estimated goal calories';
+  }
+};
+
+const getTargetStatLabel = (value?: DailyCalorieLogResponse['targetSource']) => {
+  switch (value) {
+    case 'active-diet-day':
+      return 'Diet day target';
+    case 'active-diet-plan':
+      return 'Diet plan target';
+    case 'workout-adjusted-estimate':
+      return 'Workout target';
+    default:
+      return 'Goal target';
   }
 };
 const formatLocalDate = (date: Date) => {
@@ -120,6 +134,7 @@ export const CaloriesPage: React.FC = () => {
   const [dietSlotLabel, setDietSlotLabel] = useState('');
   const [hasAppliedDietSlot, setHasAppliedDietSlot] = useState(false);
   const targetSourceLabel = formatTargetSource(dailyData?.targetSource);
+  const targetStatLabel = getTargetStatLabel(dailyData?.targetSource);
 
   useEffect(() => {
     if (!hasPremiumAccess && mode === 'ai') setMode('manual');
@@ -350,6 +365,7 @@ export const CaloriesPage: React.FC = () => {
       await refreshData(mealDate, mealMonth);
       setSelectedDate(mealDate);
       setSelectedMonth(mealMonth);
+      notifyCaloriesChanged();
       toastSuccess('Estimated meal saved.');
       resetComposer();
     } catch (requestError) {
@@ -409,6 +425,7 @@ export const CaloriesPage: React.FC = () => {
       await refreshData(mealDate, mealMonth);
       setSelectedDate(mealDate);
       setSelectedMonth(mealMonth);
+      notifyCaloriesChanged();
       resetComposer();
     } catch (requestError) {
       const nextError = axios.isAxiosError<ApiErrorResponse>(requestError)
@@ -445,6 +462,7 @@ export const CaloriesPage: React.FC = () => {
       const mealDate = entry.loggedDate;
       const mealMonth = mealDate.slice(0, 7);
       await refreshData(mealDate, mealMonth);
+      notifyCaloriesChanged();
       toastSuccess('Calorie entry removed.');
       if (editingLogId === entry.id) {
         resetComposer();
@@ -498,11 +516,8 @@ export const CaloriesPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
-              <div className="relative min-h-[420px] lg:min-h-[520px]">
-                <img src={heroImage} alt="Calories visual" className="h-full w-full object-cover" />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+            <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
+              <div className="flex min-h-[420px] flex-col gap-5 p-6 lg:min-h-[520px]">
                   <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Tracker Mode
                   </div>
@@ -519,10 +534,10 @@ export const CaloriesPage: React.FC = () => {
                       {[
                         ['Today', `${dailyData?.totals.calories ?? 0}`],
                         ['Remaining', dailyData ? `${remainingCalories}` : '--'],
-                        ['Goal target', `${displayTargetCalories}`],
+                        [targetStatLabel, `${displayTargetCalories}`],
                         ['Avg day', `${monthlySummary?.averageLoggedDayCalories ?? 0}`],
                       ].map(([label, value]) => (
-                        <div key={label} className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <div key={label} className="theme-media-panel rounded-2xl border p-4">
                           <p className="theme-media-copy text-sm">{label}</p>
                           <p
                             className={`mt-2 text-2xl font-bold sm:text-3xl ${
@@ -539,7 +554,6 @@ export const CaloriesPage: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                </div>
               </div>
             </Card>
           </div>
@@ -681,7 +695,7 @@ export const CaloriesPage: React.FC = () => {
             </Card>
 
             <Card variant="glass" className="space-y-5 rounded-[1.6rem] p-4 sm:p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Monthly review</p><h2 className="mt-1 text-xl font-bold text-[#F7F7F7] sm:text-2xl">{selectedMonth}</h2></div><Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="max-w-full sm:max-w-[220px]" /></div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Monthly review</p><h2 className="mt-1 text-xl font-bold text-[#F7F7F7] sm:text-2xl">{formatMonthLabel(selectedMonth)}</h2></div><Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="max-w-full sm:max-w-[220px]" /></div>
               {monthlySummary ? <div className="space-y-5"><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Target', `${displayMonthlyTargetCalories}`], ['Days logged', `${monthlySummary.daysLogged}/${monthlySummary.daysInMonth}`], ['Avg protein', `${monthlySummary.averageProteinGrams}g`], ['Entries', `${monthlySummary.entriesCount}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-[#0e1420] p-4"><p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{label}</p><p className="text-2xl font-bold text-[#F7F7F7]">{value}</p></Card>)}</div><div className="grid gap-5 lg:grid-cols-2"><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Daily breakdown</p><div className="mt-4 space-y-3">{monthlySummary.dailyBreakdown.length ? monthlySummary.dailyBreakdown.slice().reverse().slice(0, 6).map((day) => <div key={day.date} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-[#0f1320] px-4 py-3"><div><p className="font-medium text-[#F7F7F7]">{formatDateLabel(day.date)}</p><p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">{day.entryCount} entries</p></div><div className="text-right"><p className="font-semibold text-[#F7F7F7]">{day.calories} kcal</p></div></div>) : <p className="text-sm leading-7 text-[#98a3b8]">No monthly data yet.</p>}</div></div><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Recommendations</p><p className="mt-2 text-sm text-[#98a3b8]">{hasPremiumAccess ? 'Use the built-in guidance or ask AI for a sharper monthly read.' : 'Use the built-in guidance below. Premium unlocks a deeper AI monthly review.'}</p></div>{hasPremiumAccess ? <Button variant="secondary" size="sm" onClick={() => void handleGenerateAiInsights()} isLoading={actionState === 'ai-insights'}>AI Review</Button> : <Button variant="secondary" size="sm" onClick={() => navigate('/billing')}>Unlock AI Review</Button>}</div><div className="mt-4 space-y-3">{monthlySummary.recommendations.map((item) => <div key={item} className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-6 text-[#d5d9e3]">{item}</div>)}{aiInsights ? <div className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#d5d9e3]">{aiInsights}</div> : !hasPremiumAccess ? <div className="rounded-xl border border-dashed border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#98a3b8]">Premium adds an AI-written monthly review on top of these built-in recommendations.</div> : null}</div></div></div></div> : null}
             </Card>
           </div>

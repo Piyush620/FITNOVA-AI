@@ -89,7 +89,7 @@ export const SignupPage: React.FC = () => {
     }
 
     try {
-      await register({
+      const result = await register({
         email: formData.email,
         password: formData.password,
         fullName: formData.name,
@@ -100,7 +100,7 @@ export const SignupPage: React.FC = () => {
         goal: formData.goal,
         activityLevel: formData.activityLevel,
       });
-      navigate('/dashboard');
+      navigate(`/verify-otp?email=${encodeURIComponent(result.email)}`);
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)

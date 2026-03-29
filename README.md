@@ -43,7 +43,7 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 
 ### Web app flows
 
-- Sign up, sign in, refresh session, and log out
+- Sign up with email OTP verification, sign in, refresh session, and log out
 - View a real dashboard with workout, diet, calorie, and progress summary data
 - Generate, save, activate, view, restart, and progress workout plans
 - Generate, save, activate, view, restart, and progress diet plans
@@ -274,26 +274,34 @@ npm run preview
 
 ## Environment Notes
 
-Create `.env.local` or `.env` files in both apps.
+Use one root `.env` file for the Dockerized stack.
 
-### Backend
+### Root `.env`
 
 ```env
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/fitnova
-
-NODE_ENV=development
+NODE_ENV=production
 PORT=4000
 APP_NAME=FitNova AI
-APP_ORIGIN=http://localhost:5173,http://localhost:3000
-APP_TRUST_PROXY=false
+APP_ORIGIN=http://localhost
+APP_TRUST_PROXY=true
 SWAGGER_ENABLED=true
 CORS_ALLOW_LOCALHOST=true
+
+MONGODB_URI=mongodb://mongodb:27017/fitnova-ai
 
 JWT_ACCESS_SECRET=your_secure_access_secret
 JWT_ACCESS_TTL=15m
 JWT_REFRESH_SECRET=your_secure_refresh_secret
 JWT_REFRESH_TTL=30d
 BCRYPT_SALT_ROUNDS=12
+EMAIL_VERIFICATION_OTP_TTL_MINUTES=10
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your_gmail_address@gmail.com
+SMTP_PASS=your_gmail_app_password
+EMAIL_FROM=FitNova AI <your_gmail_address@gmail.com>
 
 AI_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
@@ -303,9 +311,9 @@ GEMINI_MODEL=gemini-2.5-flash
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4.1-mini
 
-# Optional queue scaffold
-REDIS_ENABLED=false
-REDIS_HOST=127.0.0.1
+# Queue / Redis
+REDIS_ENABLED=true
+REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_USERNAME=
 REDIS_PASSWORD=
@@ -327,18 +335,18 @@ AI_RATE_LIMIT_TTL=60000
 AI_RATE_LIMIT=12
 LOG_LEVEL=debug
 LOG_TO_FILES=false
-```
-
-### Frontend
-
-```env
-VITE_API_URL=http://localhost:4000/api/v1
-```
-
-For Docker + Nginx, use:
-
-```env
 VITE_API_URL=/api/v1
+```
+
+If you run pieces outside Docker, adjust values such as:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/fitnova-ai
+REDIS_HOST=127.0.0.1
+VITE_API_URL=http://localhost:4000/api/v1
+APP_ORIGIN=http://localhost:5173,http://localhost:3000
+APP_TRUST_PROXY=false
+NODE_ENV=development
 ```
 
 ## Usage Notes
@@ -375,6 +383,14 @@ VITE_API_URL=/api/v1
 7. If an active diet day or workout day exists, the tracker target adjusts and explains the source directly in the UI
 
 Manual calorie entry still exists as a fallback mode.
+
+### Email verification flow
+
+1. Open `Sign up`
+2. Create the account with your email and password
+3. Check your inbox for the 6-digit OTP
+4. Open the verify screen and submit the OTP
+5. After verification, FitNova creates the authenticated session and redirects to the dashboard
 
 ## Testing And Verification
 
@@ -438,6 +454,12 @@ Run it only when the backend and frontend are already running with reachable loc
 stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
 ```
 
+### Gmail SMTP / OTP
+
+- Set `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM`
+- For Gmail, use an App Password instead of your normal Gmail password
+- Signups now depend on email delivery because account activation happens after OTP verification
+
 ## Current Gaps
 
 - Backend integration coverage is still incomplete
@@ -471,6 +493,8 @@ stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
 
 - Access tokens expire normally
 - Refresh flow should restore the session
+- New signups must verify the 6-digit email OTP before first login
+- For Gmail SMTP, use an App Password instead of your normal Gmail password
 - If local state is corrupted, clear stored auth state and log in again
 
 ## Roadmap

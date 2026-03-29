@@ -8,7 +8,6 @@ import { useAuth } from '../hooks/useAuth';
 import { subscriptionsAPI, getApiErrorMessage } from '../services/api';
 import type { CheckoutSessionResponse, SubscriptionConfigStatus, SubscriptionSummary } from '../types';
 import { toastError, toastSuccess } from '../utils/toast';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -216,11 +215,8 @@ export const BillingPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
-              <div className="relative min-h-[420px] lg:min-h-[520px]">
-                <img src={heroImage} alt="Billing visual" className="h-full w-full object-cover" />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+            <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
+              <div className="flex min-h-[420px] flex-col gap-5 p-6 lg:min-h-[520px]">
                   <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Premium Access
                   </div>
@@ -240,13 +236,12 @@ export const BillingPage: React.FC = () => {
                         ['Status', subscription?.status ?? 'inactive'],
                         ['Premium access', subscription?.hasPremiumAccess ? 'Yes' : 'No'],
                       ].map(([label, value]) => (
-                        <div key={label} className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                        <div key={label} className="theme-media-panel rounded-2xl border p-4">
                           <p className="theme-media-copy text-sm">{label}</p>
                           <p className="theme-media-heading mt-2 text-2xl font-bold capitalize">{value}</p>
                         </div>
                       ))}
                     </div>
-                  </div>
                 </div>
               </div>
             </Card>

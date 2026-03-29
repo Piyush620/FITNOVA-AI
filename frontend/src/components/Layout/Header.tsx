@@ -39,7 +39,7 @@ export const Header: React.FC = () => {
     isActivePath(path) ? 'theme-nav-link theme-nav-link-active' : 'theme-nav-link';
 
   return (
-    <header className="theme-header sticky top-0 z-50 border-b backdrop-blur-xl">
+    <header className="theme-header sticky top-0 z-50 border-b">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <button

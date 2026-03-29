@@ -10,6 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 const LandingPage = lazy(() => import('./pages/Landing').then((module) => ({ default: module.LandingPage })));
 const LoginPage = lazy(() => import('./pages/Login').then((module) => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import('./pages/Signup').then((module) => ({ default: module.SignupPage })));
+const VerifyOtpPage = lazy(() => import('./pages/VerifyOtp').then((module) => ({ default: module.VerifyOtpPage })));
 const DashboardPage = lazy(() =>
   import('./pages/Dashboard').then((module) => ({ default: module.DashboardPage })),
 );
@@ -85,6 +86,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/verify-otp" element={<VerifyOtpPage />} />
 
             {/* Protected Routes */}
             <Route

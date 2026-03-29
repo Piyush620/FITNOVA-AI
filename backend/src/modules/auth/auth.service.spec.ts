@@ -9,6 +9,7 @@ import { Role } from 'src/common/enums/role.enum';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
+import { EmailService } from './email.service';
 import { User } from './schemas/user.schema';
 
 jest.mock('bcrypt', () => ({
@@ -22,6 +23,7 @@ describe('AuthService', () => {
   let mockJwtService: { signAsync: jest.Mock };
   let mockConfigService: { get: jest.Mock; getOrThrow: jest.Mock };
   let mockSubscriptionsService: { getCurrentSubscription: jest.Mock };
+  let mockEmailService: { sendEmailVerificationOtp: jest.Mock };
   let mockBcryptHash: jest.Mock;
   let mockBcryptCompare: jest.Mock;
 
@@ -65,8 +67,11 @@ describe('AuthService', () => {
         stripeSubscriptionId: null,
         currentPeriodStart: null,
         currentPeriodEnd: null,
-        cancelAtPeriodEnd: false,
+      cancelAtPeriodEnd: false,
       }),
+    };
+    mockEmailService = {
+      sendEmailVerificationOtp: jest.fn().mockResolvedValue(undefined),
     };
 
     mockBcryptHash = bcrypt.hash as jest.Mock;
@@ -90,6 +95,10 @@ describe('AuthService', () => {
           useValue: mockSubscriptionsService,
         },
         {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
+        {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
         },
@@ -110,7 +119,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('registers a new user and returns tokens', async () => {
+    it('registers a new user and sends an OTP', async () => {
       const registerDto: RegisterDto = {
         email: 'test@example.com',
         password: 'password123',
@@ -124,6 +133,7 @@ describe('AuthService', () => {
         id: 'user-id',
         email: registerDto.email,
         roles: [Role.USER],
+        isEmailVerified: false,
         profile: {
           fullName: registerDto.fullName,
           goal: registerDto.goal,
@@ -144,6 +154,10 @@ describe('AuthService', () => {
         email: 'test@example.com',
         passwordHash: 'hashed-value',
         roles: [Role.USER],
+        isEmailVerified: false,
+        emailVerificationOtpHash: 'hashed-value',
+        emailVerificationOtpExpiresAt: expect.any(Date),
+        emailVerificationSentAt: expect.any(Date),
         profile: {
           fullName: 'Test User',
           age: undefined,
@@ -154,11 +168,17 @@ describe('AuthService', () => {
           activityLevel: 'moderate',
         },
       });
-      expect(result.user.email).toBe(registerDto.email);
-      expect(result.user.subscription?.hasPremiumAccess).toBe(false);
-      expect(result.tokens.accessToken).toBe('test-token');
-      expect(result.tokens.refreshToken).toBe('test-token');
-      expect(save).toHaveBeenCalled();
+      expect(result).toEqual({
+        email: registerDto.email,
+        verificationRequired: true,
+        message: 'Account created. Enter the OTP sent to your email to verify your account.',
+      });
+      expect(mockEmailService.sendEmailVerificationOtp).toHaveBeenCalledWith(
+        'test@example.com',
+        'Test User',
+        expect.stringMatching(/^\d{6}$/),
+        10,
+      );
     });
 
     it('throws when the email already exists', async () => {
@@ -188,6 +208,7 @@ describe('AuthService', () => {
         id: 'user-id',
         email: loginDto.email,
         roles: [Role.USER],
+        isEmailVerified: true,
         profile: { fullName: 'Test User' },
         passwordHash: 'stored-hash',
         save,
@@ -268,6 +289,7 @@ describe('AuthService', () => {
         id: 'user-id',
         email: 'test@example.com',
         roles: [Role.USER],
+        isEmailVerified: true,
         profile: { fullName: 'Test User' },
         refreshTokenHash: 'stored-refresh-hash',
         save,

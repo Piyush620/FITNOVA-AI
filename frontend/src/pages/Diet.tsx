@@ -8,7 +8,6 @@ import { aiAPI, dietAPI, getApiErrorMessage, workoutsAPI } from '../services/api
 import { toastSuccess, toastError } from '../utils/toast';
 import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal, WorkoutPlan } from '../types';
 import { estimateGoalCalories } from '../utils/calorieTarget';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -190,17 +189,26 @@ export const DietPage: React.FC = () => {
     setError('');
 
     try {
-      const plansResponse = await dietAPI.listPlans(requestedPage, 6);
+      const [plansResponse, activePlanResponse] = await Promise.all([
+        dietAPI.listPlans(requestedPage, 6),
+        dietAPI.getActivePlan().catch((requestError) => {
+          if (axios.isAxiosError(requestError) && requestError.response?.status === 404) {
+            return null;
+          }
+
+          throw requestError;
+        }),
+      ]);
       const nextPlans = plansResponse.data.items;
-      const derivedActivePlan = nextPlans.find((plan) => plan.status === 'active') ?? null;
+      const resolvedActivePlan = activePlanResponse?.data ?? nextPlans.find((plan) => plan.status === 'active') ?? null;
       const routePlan = id ? nextPlans.find((plan) => plan.id === id) : null;
 
       if (plansResponse.status === 200) {
         setPlans(nextPlans);
         setPage(plansResponse.data.pagination.page);
         setTotalPages(plansResponse.data.pagination.totalPages ?? 1);
-        setActivePlan(derivedActivePlan);
-        setSelectedPlanId(id ?? routePlan?.id ?? derivedActivePlan?.id ?? nextPlans[0]?.id ?? null);
+        setActivePlan(resolvedActivePlan);
+        setSelectedPlanId(id ?? routePlan?.id ?? resolvedActivePlan?.id ?? nextPlans[0]?.id ?? null);
       }
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
@@ -664,11 +672,8 @@ export const DietPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
-              <div className="relative min-h-[520px] lg:min-h-[620px]">
-                <img src={heroImage} alt="Diet visual" className="h-full w-full object-cover" />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+            <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
+              <div className="flex min-h-[520px] flex-col gap-5 p-6 lg:min-h-[620px]">
                   <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Nutrition Mode
                   </div>
@@ -682,33 +687,34 @@ export const DietPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Calories</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlanTargetCalories ? `${selectedPlanTargetCalories}` : estimatedTrackerCalories}
                         </p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Preference</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlan ? formatPreferenceLabel(selectedPlan.preference) : 'Mixed'}
                         </p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Status</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold capitalize">{selectedPlan?.status || 'draft'}</p>
                       </div>
                     </div>
-                    <div className="theme-media-panel theme-media-panel-accent rounded-2xl border border-[#00FF88]/20 p-4 backdrop-blur">
+                  <div className="theme-media-panel theme-media-panel-accent rounded-2xl border border-[#00FF88]/20 p-4">
                       <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Calorie tracker sync</p>
                       <p className="mt-2 text-xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
                       <p className="theme-media-copy mt-2 text-sm leading-6">
                         {activePlan
-                          ? `Your calorie tracker currently follows the active diet target. This selected plan would track at ${previewTrackerCalories} kcal when active.`
+                          ? selectedPlan?.id === activePlan.id
+                            ? `Your calorie tracker is synced to this active plan at ${currentTrackerCalories} kcal.`
+                            : `Your calorie tracker currently follows "${activePlan.title}" at ${currentTrackerCalories} kcal. This selected plan would track at ${previewTrackerCalories} kcal when active.`
                           : `Before you start a diet plan, FitNova estimates your tracker target from your profile and goal. Once you save and activate a plan, the tracker updates to that plan target automatically.`}
                       </p>
                     </div>
-                  </div>
                 </div>
               </div>
             </Card>

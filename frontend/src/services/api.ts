@@ -4,6 +4,8 @@ import type {
   User,
   LoginPayload,
   RegisterPayload,
+  PendingVerificationResponse,
+  VerifyEmailOtpPayload,
   WorkoutPlan,
   DietPlan,
   CalorieLog,
@@ -148,10 +150,16 @@ apiClient.interceptors.response.use(
 
 export const authAPI = {
   register: (payload: RegisterPayload) =>
-    apiClient.post<AuthResponse>('/auth/register', payload),
+    apiClient.post<PendingVerificationResponse>('/auth/register', payload),
 
   login: (payload: LoginPayload) =>
     apiClient.post<AuthResponse>('/auth/login', payload),
+
+  verifyEmail: (payload: VerifyEmailOtpPayload) =>
+    apiClient.post<AuthResponse>('/auth/verify-email', payload),
+
+  resendEmailOtp: (email: string) =>
+    apiClient.post<PendingVerificationResponse>('/auth/resend-email-otp', { email }),
 
   getCurrentUser: () => apiClient.get<User>('/auth/me'),
 };

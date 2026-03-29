@@ -15,13 +15,13 @@ export const Card: React.FC<CardProps> = ({
   const variantClasses = {
     default: 'theme-card theme-card-default',
     gradient: 'theme-card theme-card-gradient',
-    glass: 'theme-card theme-card-glass backdrop-blur-xl',
+    glass: 'theme-card theme-card-glass',
   };
 
   return (
     <div
       className={cn(
-        'group page-ambient relative rounded-[1.75rem] border p-6 shadow-[0_18px_50px_rgba(0,0,0,0.24)] transition-all duration-300 motion-safe:[animation:fadeUp_420ms_ease-out] motion-safe:will-change-transform motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_28px_64px_rgba(0,0,0,0.28)]',
+        'group page-ambient relative rounded-[1.75rem] border p-6 shadow-[0_16px_36px_rgba(0,0,0,0.18)] transition-[box-shadow,border-color,background] duration-300 motion-safe:[animation:fadeUp_320ms_ease-out] motion-safe:hover:shadow-[0_20px_44px_rgba(0,0,0,0.2)]',
         variantClasses[variant],
         className
       )}

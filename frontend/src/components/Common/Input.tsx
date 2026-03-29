@@ -14,6 +14,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const descriptionId = helperText && !error ? `${inputId}-helper` : undefined;
     const errorId = error ? `${inputId}-error` : undefined;
 
+    const isCalendarInput = props.type === 'date' || props.type === 'month';
+
     return (
       <div className="w-full space-y-2">
         {label && (
@@ -27,7 +29,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           aria-describedby={errorId ?? descriptionId}
           aria-invalid={!!error}
           className={cn(
-            'theme-input flex h-12 w-full rounded-[1rem] border px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-300 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
+            'theme-input flex h-12 w-full rounded-[1rem] border px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow,background,color] duration-200 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
+            isCalendarInput && 'theme-calendar-input pr-12',
             error && 'border-[#ff8fbe] focus:border-[#ff8fbe] focus:ring-[#ff8fbe]/20',
             className
           )}

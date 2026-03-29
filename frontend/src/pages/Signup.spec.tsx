@@ -21,7 +21,11 @@ describe('SignupPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    register.mockResolvedValue(undefined);
+    register.mockResolvedValue({
+      email: 'piyush@example.com',
+      verificationRequired: true,
+      message: 'Account created. Enter the OTP sent to your email to verify your account.',
+    });
 
     mockUseAuth.mockReturnValue({
       user: null,
@@ -33,6 +37,8 @@ describe('SignupPage', () => {
       hasSession: false,
       login: vi.fn(),
       register,
+      verifyEmailOtp: vi.fn(),
+      resendEmailOtp: vi.fn(),
       logout: vi.fn(),
       getCurrentUser: vi.fn(),
       clearError: vi.fn(),
@@ -40,12 +46,12 @@ describe('SignupPage', () => {
     });
   });
 
-  it('submits registration details and navigates to the dashboard', async () => {
+  it('submits registration details and navigates to the verify otp page', async () => {
     render(
       <MemoryRouter initialEntries={['/signup']}>
         <Routes>
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<div>Dashboard Route</div>} />
+          <Route path="/verify-otp" element={<div>Verify OTP Route</div>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -89,6 +95,6 @@ describe('SignupPage', () => {
       );
     });
 
-    expect(await screen.findByText('Dashboard Route')).toBeInTheDocument();
+    expect(await screen.findByText('Verify OTP Route')).toBeInTheDocument();
   });
 });

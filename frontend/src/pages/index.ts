@@ -1,6 +1,7 @@
 export { LandingPage } from './Landing';
 export { LoginPage } from './Login';
 export { SignupPage } from './Signup';
+export { VerifyOtpPage } from './VerifyOtp';
 export { DashboardPage } from './Dashboard';
 export { WorkoutsPage } from './Workouts';
 export { DietPage } from './Diet';

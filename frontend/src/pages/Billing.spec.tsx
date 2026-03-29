@@ -86,6 +86,8 @@ describe('BillingPage', () => {
       hasSession: true,
       login: vi.fn(),
       register: vi.fn(),
+      verifyEmailOtp: vi.fn(),
+      resendEmailOtp: vi.fn(),
       logout: vi.fn(),
       getCurrentUser,
       clearError: vi.fn(),

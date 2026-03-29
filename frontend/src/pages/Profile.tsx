@@ -84,6 +84,34 @@ export const ProfilePage: React.FC = () => {
     if (isAuthenticated) {
       void loadProfilePage();
     }
+
+    const handleFocus = () => {
+      if (isAuthenticated) {
+        void loadProfilePage();
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'fitnova-calories-sync' && isAuthenticated) {
+        void loadProfilePage();
+      }
+    };
+
+    const handleCaloriesSync = () => {
+      if (isAuthenticated) {
+        void loadProfilePage();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('fitnova:calories-sync', handleCaloriesSync);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('fitnova:calories-sync', handleCaloriesSync);
+    };
   }, [isAuthenticated]);
 
   const avatarPreview = formData.avatarUrl || '';

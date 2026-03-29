@@ -5,7 +5,6 @@ import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Card, Button, PremiumFeatureGate, Textarea } from '../components/Common';
 import { aiAPI, getApiErrorMessage } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import heroImage from '../assets/hero.png';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -217,11 +216,8 @@ export const CoachChatPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
-              <div className="relative min-h-[420px] lg:min-h-[520px]">
-                <img src={heroImage} alt="Coach visual" className="h-full w-full object-cover" />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col gap-5 p-6">
+            <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[520px] lg:self-start">
+              <div className="flex min-h-[420px] flex-col gap-5 p-6 lg:min-h-[520px]">
                   <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Better Prompts
                   </div>
@@ -235,22 +231,21 @@ export const CoachChatPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="theme-media-panel theme-media-panel-accent rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel theme-media-panel-accent rounded-2xl border p-4">
                         <p className="theme-media-copy text-[11px] uppercase tracking-[0.22em]">Status</p>
                         <p className="mt-2 text-lg font-bold text-[#00FF88]">
                           {isSending ? 'Thinking' : 'Ready'}
                         </p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-[11px] uppercase tracking-[0.22em]">Messages</p>
                         <p className="theme-media-heading mt-2 text-lg font-bold">{messages.length}</p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-[11px] uppercase tracking-[0.22em]">Focus</p>
                         <p className="theme-media-heading mt-2 text-lg font-bold">Recovery and consistency</p>
                       </div>
                     </div>
-                  </div>
                 </div>
               </div>
             </Card>

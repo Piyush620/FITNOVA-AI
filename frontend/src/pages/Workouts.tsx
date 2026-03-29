@@ -7,7 +7,6 @@ import { useAuth } from '../hooks/useAuth';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { GenerateWorkoutPlanPayload, WorkoutDay, WorkoutPlan } from '../types';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -460,11 +459,8 @@ export const WorkoutsPage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden p-0">
-              <div className="relative min-h-full">
-                <img src={heroImage} alt="Workout visual" className="h-full w-full object-cover" />
-                <div className="theme-media-overlay absolute inset-0" />
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
+            <Card className="theme-hero-surface overflow-hidden p-0">
+              <div className="flex min-h-full flex-col justify-between gap-5 p-6">
                   <div className="theme-media-chip inline-flex self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
                     Strength Mode
                   </div>
@@ -478,22 +474,21 @@ export const WorkoutsPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Days</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold">{selectedPlan?.days.length ?? 0}</p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Duration</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold">
                           {selectedPlan ? getWorkoutDurationSummary(selectedPlan) : 'Flexible'}
                         </p>
                       </div>
-                      <div className="theme-media-panel rounded-2xl border p-4 backdrop-blur">
+                      <div className="theme-media-panel rounded-2xl border p-4">
                         <p className="theme-media-copy text-xs uppercase tracking-[0.18em]">Status</p>
                         <p className="theme-media-heading mt-2 text-xl font-bold capitalize">{selectedPlan?.status || 'draft'}</p>
                       </div>
                     </div>
-                  </div>
                 </div>
               </div>
             </Card>

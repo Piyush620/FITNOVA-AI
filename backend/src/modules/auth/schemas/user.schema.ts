@@ -51,6 +51,21 @@ export class User {
   @Prop({ select: false })
   refreshTokenHash?: string;
 
+  @Prop({ default: false })
+  isEmailVerified!: boolean;
+
+  @Prop({ select: false })
+  emailVerificationOtpHash?: string;
+
+  @Prop({ select: false })
+  emailVerificationOtpExpiresAt?: Date;
+
+  @Prop()
+  emailVerifiedAt?: Date;
+
+  @Prop()
+  emailVerificationSentAt?: Date;
+
   @Prop()
   lastLoginAt?: Date;
 

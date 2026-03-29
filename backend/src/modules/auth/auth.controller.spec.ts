@@ -14,6 +14,8 @@ describe('AuthController', () => {
 
   const mockAuthService = {
     register: jest.fn(),
+    verifyEmailOtp: jest.fn(),
+    resendEmailOtp: jest.fn(),
     login: jest.fn(),
     refreshTokens: jest.fn(),
     getProfile: jest.fn(),
@@ -58,15 +60,9 @@ describe('AuthController', () => {
       };
 
       const mockResponse = {
-        user: {
-          id: 'user-id',
-          email: registerDto.email,
-          profile: {},
-        },
-        tokens: {
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        },
+        email: registerDto.email,
+        verificationRequired: true,
+        message: 'Account created. Enter the OTP sent to your email to verify your account.',
       };
 
       mockAuthService.register.mockResolvedValue(mockResponse);

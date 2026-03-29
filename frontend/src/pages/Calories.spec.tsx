@@ -98,6 +98,8 @@ describe('CaloriesPage', () => {
       hasSession: true,
       login: vi.fn(),
       register: vi.fn(),
+      verifyEmailOtp: vi.fn(),
+      resendEmailOtp: vi.fn(),
       logout: vi.fn(),
       getCurrentUser: vi.fn(),
       clearError: vi.fn(),
