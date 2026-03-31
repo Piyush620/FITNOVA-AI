@@ -18,6 +18,7 @@ interface RequestWithCorrelationId {
 interface ResponseLike {
   statusCode?: number;
   getHeader?: (name: string) => number | string | string[] | undefined;
+  setHeader?: (name: string, value: string) => void;
   on: (event: 'finish', listener: () => void) => void;
 }
 
@@ -26,8 +27,13 @@ export class RequestLoggingMiddleware implements NestMiddleware {
   private readonly logger = new Logger('RequestLogging');
 
   use(req: RequestWithCorrelationId, res: ResponseLike, next: NextFunction) {
-    const correlationId = uuidv4();
+    const incomingCorrelationIdHeader = req.headers?.['x-correlation-id'];
+    const correlationId =
+      (Array.isArray(incomingCorrelationIdHeader)
+        ? incomingCorrelationIdHeader[0]
+        : incomingCorrelationIdHeader) || uuidv4();
     req.correlationId = correlationId;
+    res.setHeader?.('x-correlation-id', correlationId);
 
     const startTime = Date.now();
     const method = req.method ?? 'UNKNOWN';

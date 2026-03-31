@@ -31,6 +31,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : isHttpException
           ? exception.message
           : 'Internal server error';
+    const correlationId =
+      (request as FastifyRequest & { correlationId?: string }).correlationId ?? 'n/a';
 
     if (!isHttpException || status >= 500) {
       this.logger.error(
@@ -40,8 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
           statusCode: status,
           method: request.method,
           path: request.url,
-          correlationId:
-            (request as FastifyRequest & { correlationId?: string }).correlationId ?? 'n/a',
+          correlationId,
           ip: request.ip,
         },
       );
@@ -51,6 +52,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       message,
       path: request.url,
+      correlationId,
       timestamp: new Date().toISOString(),
     });
   }

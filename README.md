@@ -27,6 +27,7 @@ FitNova AI is a fitness product that combines training plans, diet plans, progre
 This repository currently contains:
 - a working NestJS + Fastify backend
 - a working React web frontend
+- a separate Expo mobile frontend
 - working Stripe billing wiring backed by MongoDB persistence
 - working BullMQ queue processing for heavyweight AI jobs
 
@@ -87,9 +88,17 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 - Zustand
 - Axios
 
+### Mobile
+
+- Expo Router
+- React Native
+- AsyncStorage
+- Zustand
+- Axios
+
 ### Still scaffold-only
 
-- Mobile app
+- Mobile app is now scaffolded with Expo Router, auth flow, and product tabs
 
 ## API Quick Links
 
@@ -131,6 +140,11 @@ FitNova AI/
 |   |   `-- main.tsx
 |   |-- package.json
 |   `-- .env.example
+|-- mobile/
+|   |-- app/
+|   |-- src/
+|   |-- package.json
+|   `-- app.json
 |-- docker-compose.yml
 |-- README.md
 `-- TODO.md
@@ -266,6 +280,17 @@ npm run test
 npm run preview
 ```
 
+### Mobile setup
+
+```bash
+cd mobile
+npm install
+copy .env.example .env
+npm start
+```
+
+Use your machine's LAN IP instead of `10.0.2.2` when testing on a physical device.
+
 ### Local URLs
 
 - Frontend: `http://localhost` in Docker, `http://localhost:5173` in local Vite dev
@@ -399,6 +424,8 @@ Manual calorie entry still exists as a fallback mode.
 ```bash
 cd backend
 npm test
+npm run test:http
+npm run test:inband
 npm run build
 ```
 
@@ -424,6 +451,14 @@ set FITNOVA_E2E_LIVE_PASSWORD=your_test_password
 ```
 
 Run it only when the backend and frontend are already running with reachable local services.
+
+`npm run test:inband` is useful in restricted Windows or sandboxed environments where Jest worker processes are blocked.
+
+## Reliability Notes
+
+- Backend critical flows now have app-level HTTP coverage for auth, users, workouts, diet, calorie logs, AI premium gating, and subscriptions
+- Request/response tracing now carries an `x-correlation-id` through the backend request lifecycle
+- Sensitive log fields such as tokens, secrets, passwords, cookies, and API keys are redacted before structured logging
 
 ## Provider Setup Notes
 
@@ -462,9 +497,9 @@ stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
 
 ## Current Gaps
 
-- Backend integration coverage is still incomplete
 - Broader frontend integration coverage is still incomplete
-- Mobile app has not started
+- Mobile app exists and several flows are live, but AI coach parity, notifications, and deeper mobile polish still need implementation
+- Mobile app exists with auth, dashboard, workouts, diet, calories, profile, coach chat, and reminder scaffolding, but it still needs local install/run verification and broader UX polish
 
 ## Development Notes
 
@@ -496,6 +531,7 @@ stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
 - New signups must verify the 6-digit email OTP before first login
 - For Gmail SMTP, use an App Password instead of your normal Gmail password
 - If local state is corrupted, clear stored auth state and log in again
+- Use the returned `x-correlation-id` header to trace failed requests through backend logs faster
 
 ## Roadmap
 

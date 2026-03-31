@@ -60,9 +60,21 @@
 - [x] Backend ESLint config (v9) created and linting passes
 - [x] Frontend test TypeScript errors fixed (Header, ProtectedRoute, Calories, Profile specs)
 - [x] Queue workers now process real BullMQ plan-generation jobs with retry/failure logging
-- [ ] Mobile app not started
+- [x] Mobile app scaffold started with Expo Router, auth flow, and product tab shell
+- [x] Mobile app now loads real dashboard, workouts, diet, calorie, and profile data from the backend
+- [x] Mobile AI coach chat is now connected to the backend with history hydration and premium gating
+- [x] Mobile reminder notifications are scaffolded through Expo notifications
 
-## Recently Fixed (March 29, 2026)
+## Recently Fixed (March 30, 2026)
+
+### Backend Verification & Observability
+- Added app-level backend HTTP tests for auth, users, workouts, diet, calorie logs, AI premium gating, and subscriptions
+- Added a reusable Nest/Fastify test harness for guarded route verification and DTO validation coverage
+- Added single-process backend test scripts for restricted Windows and sandboxed environments
+- Added correlation-id propagation on responses and error payloads
+- Added sensitive-field redaction for structured backend logging
+
+## Previously Fixed (March 29, 2026)
 
 ### Testing & QA Completed
 - Ran E2E testing guide manual smoke test (45 min) - all flows verified
@@ -225,10 +237,10 @@
     
 ### 9. Mobile
 
-- [ ] Create `mobile/` Expo app
-- [ ] Add auth flow
-- [ ] Add dashboard/workout/diet/coach/calorie-tracker screens
-- [ ] Add notifications once backend flows are stable
+- [x] Create `mobile/` Expo app
+- [x] Add auth flow
+- [x] Add dashboard/workout/diet/coach/calorie-tracker screens
+- [x] Add notifications once backend flows are stable
 
 ## Immediate Candidate Tasks
 - [x] Run full manual QA with backend + frontend running together
@@ -261,9 +273,9 @@
 - [x] Stripe billing is live, verified, and persisted in local Stripe test mode
 - [x] Billing persistence is real in MongoDB
 - [x] Redis/BullMQ workers are real, not scaffold-only
-- [ ] Integration tests cover critical flows
-- [ ] Secrets, CORS, and environment handling are production-safe
-- [ ] Logging and failure paths are observable
+- [x] Integration tests cover critical flows
+- [x] Secrets, CORS, and environment handling are production-safe
+- [x] Logging and failure paths are observable
 
 ## Known Blockers / Scope Notes
 
@@ -274,5 +286,5 @@
 - The calorie tracker now estimates calories on its own before diet-plan creation, switches to the active diet target afterward, and can expose workout-adjusted daily context when diet data is not present
 - Calories can legitimately differ by date because the tracker follows the selected day's active diet-day target, not one fixed plan-wide number
 - Diet generation is now intentionally linked to the active workout split so nutrition structure follows training demand more closely
-- Visual styling is much stronger across the app, but broader frontend QA and test coverage are still worth expanding
+- Visual styling is much stronger across the app, but broader frontend QA and test coverage are still worth expanding as follow-up polish rather than a backend-readiness blocker
 - `.env` files should remain untracked

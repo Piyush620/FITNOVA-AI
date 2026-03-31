@@ -2,6 +2,7 @@ import { ConsoleLogger } from '@nestjs/common';
 import * as winston from 'winston';
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
+const SENSITIVE_KEY_PATTERN = /token|secret|password|authorization|cookie|api[-_]?key/i;
 
 const customFormat = printf(
   ({ level, message, timestamp: ts, ...meta }) => {
@@ -62,6 +63,26 @@ const loggerInstance = winston.createLogger({
   transports,
 });
 
+function sanitizeLogValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeLogValue(entry));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, unknown>>(
+    (sanitized, [key, entryValue]) => {
+      sanitized[key] = SENSITIVE_KEY_PATTERN.test(key)
+        ? '[REDACTED]'
+        : sanitizeLogValue(entryValue);
+      return sanitized;
+    },
+    {},
+  );
+}
+
 export class Logger extends ConsoleLogger {
   private extractLogPayload(optionalParams: unknown[]) {
     const payload: Record<string, unknown> = {};
@@ -74,7 +95,7 @@ export class Logger extends ConsoleLogger {
       }
 
       if (param && typeof param === 'object') {
-        Object.assign(payload, param);
+        Object.assign(payload, sanitizeLogValue(param));
       }
     }
 
@@ -107,7 +128,7 @@ export class Logger extends ConsoleLogger {
       }
 
       if (param && typeof param === 'object' && !Array.isArray(param)) {
-        Object.assign(meta, param);
+        Object.assign(meta, sanitizeLogValue(param));
       }
     }
 

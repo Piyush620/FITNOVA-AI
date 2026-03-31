@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "FitNova AI Mobile",
+    "slug": "fitnova-ai-mobile",
+    "scheme": "fitnova",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#080A12"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#00E28A",
+          "defaultChannel": "fitnova-reminders"
+        }
+      ]
+    ]
+  }
+}

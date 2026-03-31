@@ -10,6 +10,8 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
+    "test:inband": "jest --runInBand",
+    "test:http": "jest --runInBand test/auth.e2e.spec.ts test/product-flows.e2e.spec.ts test/premium-and-billing.e2e.spec.ts",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
   },
