@@ -13,7 +13,12 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-import { calorieLogSources, calorieMealTypes, type CalorieMealType } from '../schemas/calorie-log.schema';
+import {
+  calorieLogSources,
+  calorieMealTypes,
+  type CalorieLogSource,
+  type CalorieMealType,
+} from '../schemas/calorie-log.schema';
 
 class CreateCalorieLogItemDto {
   @ApiProperty({ example: 'Roti' })
@@ -51,7 +56,7 @@ export class CreateCalorieLogDto {
   @ApiPropertyOptional({ enum: calorieLogSources, example: 'ai' })
   @IsOptional()
   @IsEnum(calorieLogSources)
-  source?: 'manual' | 'ai';
+  source?: CalorieLogSource;
 
   @ApiPropertyOptional({ example: '2 rotis, dal, paneer sabzi' })
   @IsOptional()

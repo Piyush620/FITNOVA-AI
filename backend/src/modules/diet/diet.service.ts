@@ -3,15 +3,18 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { CalorieLog, CalorieLogDocument } from 'src/modules/calorie-logs/schemas/calorie-log.schema';
 
 import { CreateDietPlanDto } from './dto/create-diet-plan.dto';
-import { DietPlan, DietPlanDocument, DietPlanStatus } from './schemas/diet-plan.schema';
+import { DietPlan, DietPlanDocument, DietPlanStatus, MealEntry } from './schemas/diet-plan.schema';
 
 @Injectable()
 export class DietService {
   constructor(
     @InjectModel(DietPlan.name)
     private readonly dietPlanModel: Model<DietPlanDocument>,
+    @InjectModel(CalorieLog.name)
+    private readonly calorieLogModel: Model<CalorieLogDocument>,
   ) {}
 
   async createPlan(userId: string, payload: CreateDietPlanDto) {
@@ -95,6 +98,18 @@ export class DietService {
     await this.deactivateActivePlans(userId);
 
     const plan = await this.findOwnedPlan(userId, planId);
+    const hasProgress = plan.days.some((day) => day.meals.some((meal) => !!meal.completedAt));
+
+    if (hasProgress) {
+      plan.days.forEach((day) => {
+        day.meals.forEach((meal) => {
+          meal.completedAt = undefined;
+        });
+      });
+      plan.startDate = new Date();
+      plan.endDate = undefined;
+    }
+
     plan.status = DietPlanStatus.ACTIVE;
     await plan.save();
 
@@ -165,12 +180,53 @@ export class DietService {
     }
 
     meal.completedAt = new Date();
+    await this.syncCompletedMealToCalories(userId, meal, meal.completedAt);
+
     if (plan.days.every((day) => day.meals.every((entry) => !!entry.completedAt))) {
       plan.status = DietPlanStatus.COMPLETED;
     }
 
     await plan.save();
     return this.serializePlan(plan);
+  }
+
+  private async syncCompletedMealToCalories(
+    userId: string,
+    meal: MealEntry,
+    completedAt: Date,
+  ) {
+    const loggedDate = completedAt.toISOString().slice(0, 10);
+    const filter = {
+      userId: new Types.ObjectId(userId),
+      loggedDate,
+      mealType: meal.type,
+      source: 'diet-plan',
+    };
+
+    const existingLog = await this.calorieLogModel.findOne(filter);
+
+    if (existingLog) {
+      existingLog.title = meal.title;
+      existingLog.calories = meal.calories ?? 0;
+      existingLog.proteinGrams = meal.proteinGrams;
+      existingLog.carbsGrams = meal.carbsGrams;
+      existingLog.fatsGrams = meal.fatsGrams;
+      existingLog.notes = meal.description;
+      existingLog.rawInput = meal.items?.join(', ');
+      await existingLog.save();
+      return;
+    }
+
+    await this.calorieLogModel.create({
+      ...filter,
+      title: meal.title,
+      calories: meal.calories ?? 0,
+      proteinGrams: meal.proteinGrams,
+      carbsGrams: meal.carbsGrams,
+      fatsGrams: meal.fatsGrams,
+      notes: meal.description,
+      rawInput: meal.items?.join(', '),
+    });
   }
 
   private async findOwnedPlan(userId: string, planId: string) {

@@ -1,12 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, Pagination, PremiumFeatureGate, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, LiveCalendar, Pagination, PremiumFeatureGate, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
+import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, dietAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal, WorkoutPlan } from '../types';
+import { notifyDietChanged } from '../utils/appSync';
+import { formatDateLabel, getWeekdayName } from '../utils/calendar';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 
 type ApiErrorResponse = {
@@ -121,12 +124,6 @@ const defaultGeneratorState: GenerateDietPlanPayload = {
   budget: 'medium',
 };
 
-const notifyDietTrackerSync = () => {
-  const syncToken = `${Date.now()}`;
-  localStorage.setItem('fitnova-diet-sync', syncToken);
-  window.dispatchEvent(new CustomEvent('fitnova:diet-sync', { detail: syncToken }));
-};
-
 export const DietPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
   const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
@@ -147,6 +144,7 @@ export const DietPage: React.FC = () => {
     { type: 'activate' | 'complete' | 'generate' | 'restart' | 'delete'; key: string } | null
   >(null);
   const [error, setError] = useState('');
+  const { selectedDate, selectedMonth, setSelectedDate, setSelectedMonth, goToToday } = useSharedCalendar();
 
   useEffect(() => {
     setGeneratorState((current) => ({
@@ -228,6 +226,34 @@ export const DietPage: React.FC = () => {
   }, [loadPlans]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const refresh = () => {
+      void loadPlans(false, 1);
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'fitnova-calories-sync' || event.key === 'fitnova-diet-sync') {
+        refresh();
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    window.addEventListener('fitnova:calories-sync', refresh);
+    window.addEventListener('fitnova:diet-sync', refresh);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('fitnova:calories-sync', refresh);
+      window.removeEventListener('fitnova:diet-sync', refresh);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [isAuthenticated, loadPlans]);
+
+  useEffect(() => {
     if (id) {
       setSelectedPlanId(id);
     }
@@ -238,6 +264,10 @@ export const DietPage: React.FC = () => {
     activePlan ??
     plans[0] ??
     null;
+  const selectedDay = useMemo(
+    () => selectedPlan?.days.find((day) => day.dayLabel.toLowerCase() === getWeekdayName(selectedDate).toLowerCase()) ?? null,
+    [selectedDate, selectedPlan],
+  );
   const selectedPlanNutrition = selectedPlan ? calculatePlanNutrition(selectedPlan) : null;
   const selectedPlanCompletedMeals =
     selectedPlan?.progress?.completedMeals ??
@@ -271,19 +301,21 @@ export const DietPage: React.FC = () => {
       ? selectedPlanTargetCalories
       : estimatedTrackerCalories;
 
-  const handleActivatePlan = async (planId: string) => {
-    setActionState({ type: 'activate', key: planId });
+  const handleActivatePlan = async (plan: DietPlan) => {
+    setActionState({ type: 'activate', key: plan.id });
     setError('');
 
     try {
-      const response = await dietAPI.activatePlan(planId);
+      const hasProgress =
+        (plan.progress?.completedMeals ?? plan.days.reduce((sum, day) => sum + day.meals.filter((meal) => !!meal.completedAt).length, 0)) > 0;
+      const response = hasProgress ? await dietAPI.restartPlan(plan.id) : await dietAPI.activatePlan(plan.id);
       const nextActivePlan = response.data;
       setActivePlan(nextActivePlan);
       setSelectedPlanId(nextActivePlan.id);
-      notifyDietTrackerSync();
+      notifyDietChanged();
       navigate(`/diet/${nextActivePlan.id}`);
       await loadPlans(false, 1);
-      toastSuccess('Diet plan activated!');
+      toastSuccess(hasProgress ? 'Diet plan restored fresh.' : 'Diet plan activated!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -306,7 +338,7 @@ export const DietPage: React.FC = () => {
 
       setPlans((current) => current.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)));
       setSelectedPlanId(updatedPlan.id);
-      notifyDietTrackerSync();
+      notifyDietChanged();
       navigate(`/diet/${updatedPlan.id}`);
       if (activePlan?.id === updatedPlan.id || updatedPlan.status === 'active' || updatedPlan.status === 'completed') {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
@@ -334,7 +366,7 @@ export const DietPage: React.FC = () => {
       const restartedPlan = response.data;
       setActivePlan(restartedPlan);
       setSelectedPlanId(restartedPlan.id);
-      notifyDietTrackerSync();
+      notifyDietChanged();
       navigate(`/diet/${restartedPlan.id}`);
       await loadPlans(false, 1);
       toastSuccess('Diet week restarted. Fresh meal tracking is ready!');
@@ -370,7 +402,7 @@ export const DietPage: React.FC = () => {
       if (activePlan?.id === planId) {
         setActivePlan(remainingPlans.find((plan) => plan.status === 'active') ?? null);
       }
-      notifyDietTrackerSync();
+      notifyDietChanged();
       if (id === planId) {
         navigate('/diet');
       }
@@ -431,7 +463,7 @@ export const DietPage: React.FC = () => {
       setPlans((current) => [generatedPlan, ...current.filter((plan) => plan.id !== generatedPlan.id)]);
       setActivePlan(generatedPlan);
       setSelectedPlanId(generatedPlan.id);
-      notifyDietTrackerSync();
+      notifyDietChanged();
       navigate(`/diet/${generatedPlan.id}`);
       await loadPlans();
       toastSuccess('AI diet plan generated and saved!');
@@ -670,6 +702,17 @@ export const DietPage: React.FC = () => {
                   </p>
                 </Card>
               </div>
+              <Card className="space-y-4 p-5">
+                <LiveCalendar
+                  selectedDate={selectedDate}
+                  selectedMonth={selectedMonth}
+                  onDateChange={setSelectedDate}
+                  onMonthChange={setSelectedMonth}
+                  onToday={goToToday}
+                  subtitle={selectedPlan ? `${selectedPlan.title} on ${formatDateLabel(selectedDate)}` : 'Follow one day at a time'}
+                  showMonthControls
+                />
+              </Card>
             </div>
 
             <Card className="theme-hero-surface overflow-hidden border-white/10 p-0 lg:min-h-[620px] lg:self-start">
@@ -1000,8 +1043,8 @@ export const DietPage: React.FC = () => {
                           Restart Week
                         </Button>
                       ) : plan.status !== 'active' ? (
-                        <Button size="sm" onClick={() => void handleActivatePlan(plan.id)} isLoading={isActivating}>
-                          Activate
+                        <Button size="sm" onClick={() => void handleActivatePlan(plan)} isLoading={isActivating}>
+                          {(plan.progress?.completedMeals ?? plan.days.reduce((sum, day) => sum + day.meals.filter((meal) => !!meal.completedAt).length, 0)) > 0 ? 'Restore Fresh' : 'Activate'}
                         </Button>
                       ) : null}
                       <Button
@@ -1111,6 +1154,32 @@ export const DietPage: React.FC = () => {
                     </div>
                   </div>
 
+                  <div className="theme-subtle-panel rounded-2xl border p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Selected day</p>
+                        <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                          {selectedDay ? `${selectedDay.dayLabel}, ${formatDateLabel(selectedDate)}` : formatDateLabel(selectedDate)}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-400">
+                          {selectedDay
+                            ? 'Diet now follows the shared live calendar, so meal completion stays aligned with calories.'
+                            : 'No meal schedule is mapped to this date in the current plan.'}
+                        </p>
+                      </div>
+                      {selectedDay ? (
+                        <div className="min-w-[220px]">
+                          <div className="flex items-center justify-between text-sm text-gray-400">
+                            <span>Meals completed</span>
+                            <span className="font-semibold text-[#F7F7F7]">
+                              {selectedDay.meals.filter((meal) => !!meal.completedAt).length}/{selectedDay.meals.length}
+                            </span>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
                   {selectedPlan.notes ? (
                     <div className="theme-subtle-panel rounded-lg border p-4 text-gray-300">
                       {selectedPlan.notes}
@@ -1151,7 +1220,17 @@ export const DietPage: React.FC = () => {
                 </Card>
 
                 <div className="space-y-4">
-                  {selectedPlan.days.map((day) => renderDayCard(selectedPlan.id, day))}
+                  {selectedDay ? (
+                    renderDayCard(selectedPlan.id, selectedDay)
+                  ) : (
+                    <Card className="space-y-3 p-6">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">No scheduled meals</p>
+                      <h3 className="text-xl font-bold text-[#F7F7F7]">{formatDateLabel(selectedDate)}</h3>
+                      <p className="text-sm leading-7 text-gray-400">
+                        This plan does not have a meal set mapped to the selected live-calendar day yet. Move the calendar or activate a different plan.
+                      </p>
+                    </Card>
+                  )}
                 </div>
               </div>
             ) : null}

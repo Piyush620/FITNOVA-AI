@@ -165,7 +165,7 @@ export interface CalorieLog {
     | 'post-workout'
     | 'other';
   title: string;
-  source?: 'manual' | 'ai';
+  source?: 'manual' | 'ai' | 'diet-plan';
   rawInput?: string;
   calories: number;
   proteinGrams?: number;
@@ -196,6 +196,8 @@ export interface DailyCalorieLogResponse {
     focus: string;
     durationMinutes?: number;
     isTrainingDay: boolean;
+    completedAt?: string | null;
+    isCompleted?: boolean;
   } | null;
   totals: {
     calories: number;

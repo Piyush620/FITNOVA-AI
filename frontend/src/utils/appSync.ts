@@ -14,3 +14,13 @@ export const notifyCaloriesChanged = () => {
   dispatchWindowEvent('fitnova:calories-sync');
   writeStorageSignal('fitnova-calories-sync');
 };
+
+export const notifyDietChanged = () => {
+  dispatchWindowEvent('fitnova:diet-sync');
+  writeStorageSignal('fitnova-diet-sync');
+};
+
+export const notifyWorkoutChanged = () => {
+  dispatchWindowEvent('fitnova:workout-sync');
+  writeStorageSignal('fitnova-workout-sync');
+};

@@ -1,10 +1,14 @@
 import { PropsWithChildren } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { colors } from '@/theme/colors';
 
-export function Panel({ children }: PropsWithChildren) {
-  return <View style={styles.panel}>{children}</View>;
+type Props = PropsWithChildren<{
+  style?: StyleProp<ViewStyle>;
+}>;
+
+export function Panel({ children, style }: Props) {
+  return <View style={[styles.panel, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({

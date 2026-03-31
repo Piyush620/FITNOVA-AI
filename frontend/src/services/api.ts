@@ -75,7 +75,7 @@ type CalorieLogPayload = {
   loggedDate: string;
   mealType: CalorieLog['mealType'];
   title: string;
-  source?: 'manual' | 'ai';
+  source?: 'manual' | 'ai' | 'diet-plan';
   rawInput?: string | null;
   calories: number;
   proteinGrams?: number | null;

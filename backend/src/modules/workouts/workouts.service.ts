@@ -101,6 +101,16 @@ export class WorkoutsService {
     await this.deactivateActivePlans(userId);
 
     const plan = await this.findOwnedPlan(userId, planId);
+    const hasProgress = plan.days.some((day) => !!day.completedAt);
+
+    if (hasProgress) {
+      plan.days.forEach((day) => {
+        day.completedAt = undefined;
+      });
+      plan.startDate = new Date();
+      plan.endDate = undefined;
+    }
+
     plan.status = WorkoutPlanStatus.ACTIVE;
     await plan.save();
 

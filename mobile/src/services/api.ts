@@ -7,13 +7,18 @@ import type {
   AiInteraction,
   AuthTokens,
   CalorieEstimate,
+  CalorieInsightsResponse,
   CalorieLog,
+  CheckoutSessionResponse,
   DailyCalorieLogResponse,
   DietPlan,
   DashboardSummary,
   LoginPayload,
+  MonthlyCalorieSummary,
   PendingVerificationResponse,
   RegisterPayload,
+  SubscriptionConfigStatus,
+  SubscriptionSummary,
   User,
   VerifyEmailOtpPayload,
   WorkoutPlan,
@@ -47,6 +52,22 @@ type CalorieEstimateResponse = {
   provider: 'gemini' | 'openai';
   model: string;
   estimate: CalorieEstimate;
+  generatedAt: string;
+};
+type GeneratedWorkoutPlanResponse = {
+  type: 'workout-plan';
+  provider: 'gemini' | 'openai';
+  model: string;
+  saved: true;
+  plan: WorkoutPlan;
+  generatedAt: string;
+};
+type GeneratedDietPlanResponse = {
+  type: 'diet-plan';
+  provider: 'gemini' | 'openai';
+  model: string;
+  saved: true;
+  plan: DietPlan;
   generatedAt: string;
 };
 
@@ -155,6 +176,7 @@ export const workoutsAPI = {
     apiClient.get<PaginatedResponse<WorkoutPlan>>('/workouts/plans', { params: { page, limit } }),
   getActivePlan: () => apiClient.get<WorkoutPlan>('/workouts/plans/active'),
   activatePlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/activate`, {}),
+  restartPlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/restart`, {}),
   deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/workouts/plans/${planId}`),
   completeSession: (planId: string, dayNumber: number) =>
     apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/sessions/${dayNumber}/complete`, {}),
@@ -165,6 +187,7 @@ export const dietAPI = {
     apiClient.get<PaginatedResponse<DietPlan>>('/diet/plans', { params: { page, limit } }),
   getActivePlan: () => apiClient.get<DietPlan>('/diet/plans/active'),
   activatePlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/activate`, {}),
+  restartPlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/restart`, {}),
   deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/diet/plans/${planId}`),
   completeMeal: (planId: string, dayNumber: number, mealType: string) =>
     apiClient.post<DietPlan>(`/diet/plans/${planId}/days/${dayNumber}/meals/${mealType}/complete`, {}),
@@ -173,6 +196,8 @@ export const dietAPI = {
 export const caloriesAPI = {
   getDaily: (date?: string) =>
     apiClient.get<DailyCalorieLogResponse>('/calorie-logs/daily', { params: { date } }),
+  getMonthlySummary: (month?: string) =>
+    apiClient.get<MonthlyCalorieSummary>('/calorie-logs/monthly-summary', { params: { month } }),
   createLog: (payload: {
     loggedDate: string;
     mealType: CalorieLog['mealType'];
@@ -198,6 +223,36 @@ export const aiAPI = {
     mealType: CalorieLog['mealType'];
     rawInput: string;
   }) => apiClient.post<CalorieEstimateResponse>('/ai/calorie-estimate', payload),
+  getCalorieInsights: (month?: string) =>
+    apiClient.post<CalorieInsightsResponse>('/ai/calorie-insights', { month }),
+  generateAndSaveWorkoutPlan: (payload: {
+    weight: string;
+    goal: string;
+    experience: string;
+    trainingDaysPerWeek: number;
+    equipment: string;
+  }) => apiClient.post<GeneratedWorkoutPlanResponse>('/ai/workout-plan/save', payload),
+  generateAndSaveDietPlan: (payload: {
+    goal: string;
+    currentWeightKg: number;
+    targetWeightKg: number;
+    timelineWeeks: number;
+    preference: 'veg' | 'non-veg' | 'eggetarian';
+    cuisineRegion: 'north-indian' | 'south-indian' | 'east-indian' | 'west-indian' | 'mixed-indian';
+    budget: 'low' | 'medium' | 'high';
+  }) => apiClient.post<GeneratedDietPlanResponse>('/ai/diet-plan/save', payload),
+};
+
+export const subscriptionsAPI = {
+  getStatus: () => apiClient.get<SubscriptionConfigStatus>('/subscriptions/status'),
+  getCurrent: () => apiClient.get<SubscriptionSummary>('/subscriptions/me'),
+  confirmCheckoutSession: (sessionId: string) =>
+    apiClient.post<SubscriptionSummary>('/subscriptions/checkout-session/confirm', { sessionId }),
+  createCheckoutSession: (payload: {
+    plan: 'monthly' | 'yearly';
+    successUrl: string;
+    cancelUrl: string;
+  }) => apiClient.post<CheckoutSessionResponse>('/subscriptions/checkout-session', payload),
 };
 
 export default apiClient;

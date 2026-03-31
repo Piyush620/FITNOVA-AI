@@ -64,6 +64,38 @@
 - [x] Mobile app now loads real dashboard, workouts, diet, calorie, and profile data from the backend
 - [x] Mobile AI coach chat is now connected to the backend with history hydration and premium gating
 - [x] Mobile reminder notifications are scaffolded through Expo notifications
+- [x] Mobile workout/diet plans can restore as fresh cycles when previously completed
+- [x] Mobile live calendar is shared across diet, workouts, and calories
+- [x] Mobile diet and workouts now show one selected day at a time instead of the whole plan at once
+- [x] Diet meal completion now syncs into calorie tracking, and calorie meal logging now syncs back into diet completion
+- [x] Calorie tracking now exposes workout completion status for the selected calendar day
+- [x] Mobile tabs refresh synced plan/calorie state on focus
+- [x] Web live calendar is shared across diet, workouts, and calories
+- [x] Web diet and workouts now show one selected day at a time instead of the whole plan at once
+- [x] Web plans restore fresh when previously completed plans are activated again
+- [x] Web calories, diet, and workouts now refresh synced state from shared calendar and cross-feature events
+
+## Recently Fixed (March 31, 2026)
+
+### Mobile Calendar & Sync
+- Added a shared mobile calendar store so Diet, Workouts, and Calories follow one selected date
+- Added reusable `LiveCalendar` mobile component and date utilities
+- Changed mobile Diet and Workouts to render one calendar-selected day at a time
+- Added mobile `restart` API usage so completed plans restore as fresh cycles instead of reopening with old progress
+- Fixed mobile calorie calendar date parsing so invalid inputs no longer crash the app
+
+### Cross-Feature Sync
+- Completing a diet meal now creates/updates a matching calorie log entry for that calendar day
+- Creating, updating, or deleting a calorie meal log now syncs the corresponding diet meal completion state
+- Calorie tracker daily context now includes workout completion status for the selected day
+- Diet, Workouts, and Calories now reload synced data when the user returns to the tab
+- Web Diet, Workouts, and Calories now follow the same shared live calendar date and refresh together
+
+### Web Frontend Parity
+- Added reusable shared web calendar hook/component so Diet, Workouts, and Calories stay on one selected date
+- Changed web Diet and Workouts detail views to show only the selected live-calendar day
+- Updated web activation flow so progressed plans restore fresh instead of reopening with completed state
+- Added web cross-page refresh hooks so calorie, diet, and workout changes stay visible without stale detail views
 
 ## Recently Fixed (March 30, 2026)
 
@@ -143,6 +175,8 @@
 - [x] Next active diet meal guidance on the calorie logging page
 - [x] Workout split context now drives diet-day calorie shaping and post-workout nutrition support
 - [x] Calorie tracker now adjusts daily messaging/targets from active workout and active diet day context
+- [x] Web diet, workouts, and calories now share one live calendar and one-day-at-a-time detail flow
+- [x] Web plan activation now restores fresh cycles when previous progress exists
 
 ## Remaining High-Priority Work
 

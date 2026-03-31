@@ -1,12 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, Pagination, PremiumFeatureGate, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, Input, LiveCalendar, Pagination, PremiumFeatureGate, Select } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
+import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { GenerateWorkoutPlanPayload, WorkoutDay, WorkoutPlan } from '../types';
+import { notifyWorkoutChanged } from '../utils/appSync';
+import { formatDateLabel, getWeekdayName } from '../utils/calendar';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -81,6 +84,7 @@ export const WorkoutsPage: React.FC = () => {
     { type: 'activate' | 'complete' | 'generate' | 'restart' | 'delete'; key: string } | null
   >(null);
   const [error, setError] = useState('');
+  const { selectedDate, selectedMonth, setSelectedDate, setSelectedMonth, goToToday } = useSharedCalendar();
 
   useEffect(() => {
     setGeneratorState({
@@ -137,6 +141,34 @@ export const WorkoutsPage: React.FC = () => {
   }, [loadPlans]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const refresh = () => {
+      void loadPlans(false, 1);
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'fitnova-calories-sync' || event.key === 'fitnova-workout-sync') {
+        refresh();
+      }
+    };
+
+    window.addEventListener('focus', refresh);
+    window.addEventListener('fitnova:calories-sync', refresh);
+    window.addEventListener('fitnova:workout-sync', refresh);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('fitnova:calories-sync', refresh);
+      window.removeEventListener('fitnova:workout-sync', refresh);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [isAuthenticated, loadPlans]);
+
+  useEffect(() => {
     if (id) {
       setSelectedPlanId(id);
     }
@@ -147,6 +179,10 @@ export const WorkoutsPage: React.FC = () => {
     activePlan ??
     plans[0] ??
     null;
+  const selectedDay = useMemo(
+    () => selectedPlan?.days.find((day) => day.dayLabel.toLowerCase() === getWeekdayName(selectedDate).toLowerCase()) ?? null,
+    [selectedDate, selectedPlan],
+  );
   const selectedPlanCompletedDays =
     selectedPlan?.progress?.completedDays ??
     selectedPlan?.days.filter((day) => !!day.completedAt).length ??
@@ -158,18 +194,20 @@ export const WorkoutsPage: React.FC = () => {
   const selectedPlanCompletionRate =
     selectedPlanTotalDays > 0 ? Math.round((selectedPlanCompletedDays / selectedPlanTotalDays) * 100) : 0;
 
-  const handleActivatePlan = async (planId: string) => {
-    setActionState({ type: 'activate', key: planId });
+  const handleActivatePlan = async (plan: WorkoutPlan) => {
+    setActionState({ type: 'activate', key: plan.id });
     setError('');
 
     try {
-      const response = await workoutsAPI.activatePlan(planId);
+      const hasProgress = (plan.progress?.completedDays ?? plan.days.filter((day) => !!day.completedAt).length) > 0;
+      const response = hasProgress ? await workoutsAPI.restartPlan(plan.id) : await workoutsAPI.activatePlan(plan.id);
       const nextActivePlan = response.data;
       setActivePlan(nextActivePlan);
       setSelectedPlanId(nextActivePlan.id);
+      notifyWorkoutChanged();
       navigate(`/workouts/${nextActivePlan.id}`);
       await loadPlans();
-      toastSuccess('Workout plan activated!');
+      toastSuccess(hasProgress ? 'Workout plan restored fresh.' : 'Workout plan activated!');
     } catch (error) {
       const message = axios.isAxiosError<ApiErrorResponse>(error)
         ? getApiErrorMessage(error.response?.data?.message)
@@ -194,6 +232,7 @@ export const WorkoutsPage: React.FC = () => {
         current.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan))
       );
       setSelectedPlanId(updatedPlan.id);
+      notifyWorkoutChanged();
       navigate(`/workouts/${updatedPlan.id}`);
       if (activePlan?.id === updatedPlan.id || updatedPlan.status === 'active' || updatedPlan.status === 'completed') {
         setActivePlan(updatedPlan.status === 'archived' ? null : updatedPlan);
@@ -221,6 +260,7 @@ export const WorkoutsPage: React.FC = () => {
       const restartedPlan = response.data;
       setActivePlan(restartedPlan);
       setSelectedPlanId(restartedPlan.id);
+      notifyWorkoutChanged();
       navigate(`/workouts/${restartedPlan.id}`);
       await loadPlans(false, 1);
       toastSuccess('Workout week restarted. Fresh cycle ready!');
@@ -256,6 +296,7 @@ export const WorkoutsPage: React.FC = () => {
       if (activePlan?.id === planId) {
         setActivePlan(remainingPlans.find((plan) => plan.status === 'active') ?? null);
       }
+      notifyWorkoutChanged();
       if (id === planId) {
         navigate('/workouts');
       }
@@ -311,6 +352,7 @@ export const WorkoutsPage: React.FC = () => {
       });
       setActivePlan(generatedPlan);
       setSelectedPlanId(generatedPlan.id);
+      notifyWorkoutChanged();
       navigate(`/workouts/${generatedPlan.id}`);
       await loadPlans(false, 1);
       toastSuccess('AI workout plan generated and saved!');
@@ -457,6 +499,17 @@ export const WorkoutsPage: React.FC = () => {
                   <p className="text-3xl font-bold text-[#F7F7F7]">{selectedPlanCompletionRate}%</p>
                 </Card>
               </div>
+              <Card className="space-y-4 p-5">
+                <LiveCalendar
+                  selectedDate={selectedDate}
+                  selectedMonth={selectedMonth}
+                  onDateChange={setSelectedDate}
+                  onMonthChange={setSelectedMonth}
+                  onToday={goToToday}
+                  subtitle={selectedPlan ? `${selectedPlan.title} on ${formatDateLabel(selectedDate)}` : 'Follow one workout day at a time'}
+                  showMonthControls
+                />
+              </Card>
             </div>
 
             <Card className="theme-hero-surface overflow-hidden p-0">
@@ -702,10 +755,10 @@ export const WorkoutsPage: React.FC = () => {
                       ) : plan.status !== 'active' ? (
                         <Button
                           size="sm"
-                          onClick={() => void handleActivatePlan(plan.id)}
+                          onClick={() => void handleActivatePlan(plan)}
                           isLoading={isActivating}
                         >
-                          Activate
+                          {(plan.progress?.completedDays ?? plan.days.filter((day) => !!day.completedAt).length) > 0 ? 'Restore Fresh' : 'Activate'}
                         </Button>
                       ) : null}
                       <Button
@@ -812,6 +865,27 @@ export const WorkoutsPage: React.FC = () => {
                     </div>
                   </div>
 
+                  <div className="rounded-2xl border border-[#2e303a] bg-[#0B0B0B] p-5">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Selected day</p>
+                        <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                          {selectedDay ? `${selectedDay.dayLabel}, ${formatDateLabel(selectedDate)}` : formatDateLabel(selectedDate)}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-400">
+                          {selectedDay
+                            ? 'Workouts now follow the shared live calendar, so training status lines up with calorie tracking.'
+                            : 'No workout day is mapped to the selected date in this split.'}
+                        </p>
+                      </div>
+                      {selectedDay ? (
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${selectedDay.completedAt ? 'bg-[#1f3a2c] text-[#7fffc1]' : 'bg-[#2d2f3a] text-[#c3c7d1]'}`}>
+                          {selectedDay.completedAt ? 'Done' : 'Pending'}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
                   {selectedPlan.notes ? (
                     <div className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4 text-gray-300">
                       {selectedPlan.notes}
@@ -852,7 +926,17 @@ export const WorkoutsPage: React.FC = () => {
                 </Card>
 
                 <div className="space-y-4">
-                  {selectedPlan.days.map((day) => renderDayCard(selectedPlan.id, day))}
+                  {selectedDay ? (
+                    renderDayCard(selectedPlan.id, selectedDay)
+                  ) : (
+                    <Card className="space-y-3 p-6">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">No scheduled training</p>
+                      <h3 className="text-xl font-bold text-[#F7F7F7]">{formatDateLabel(selectedDate)}</h3>
+                      <p className="text-sm leading-7 text-gray-400">
+                        This split does not have a workout day mapped to the selected live-calendar date. Move the calendar or choose another plan.
+                      </p>
+                    </Card>
+                  )}
                 </div>
               </div>
             ) : null}

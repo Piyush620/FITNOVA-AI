@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Button, Card, Input, PremiumFeatureGate, Select, Textarea } from '../components/Common';
+import { Breadcrumbs, Button, Card, Input, LiveCalendar, PremiumFeatureGate, Select, Textarea } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
+import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, caloriesAPI, dietAPI, getApiErrorMessage } from '../services/api';
 import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, DietPlan, Meal, MonthlyCalorieSummary } from '../types';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 import { notifyCaloriesChanged } from '../utils/appSync';
+import { formatDateLabel, formatMonthLabel } from '../utils/calendar';
 import { toastError, toastSuccess } from '../utils/toast';
 
 type ApiErrorResponse = { message?: string | string[] };
@@ -22,12 +24,8 @@ type NextDietSlot = {
   meal: Meal;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-const monthNow = () => new Date().toISOString().slice(0, 7);
 const emptyManual = (loggedDate: string): ManualForm => ({ loggedDate, mealType: 'breakfast', title: '', calories: '', proteinGrams: '', carbsGrams: '', fatsGrams: '', notes: '' });
 const mealTypeOptions = [{ value: 'breakfast', label: 'Breakfast' }, { value: 'mid-morning', label: 'Mid-Morning' }, { value: 'lunch', label: 'Lunch' }, { value: 'evening-snack', label: 'Evening Snack' }, { value: 'dinner', label: 'Dinner' }, { value: 'post-workout', label: 'Post-Workout' }, { value: 'other', label: 'Other' }];
-const formatDateLabel = (value: string) => new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
-const formatMonthLabel = (value: string) => new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(`${value}-01T00:00:00`));
 const formatMealLabel = (value: CalorieLog['mealType']) => value.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 const formatTargetSource = (value?: DailyCalorieLogResponse['targetSource']) => {
   switch (value) {
@@ -118,9 +116,8 @@ export const CaloriesPage: React.FC = () => {
   const { user } = useAuth();
   const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
   const [mode, setMode] = useState<LogMode>('ai');
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [selectedMonth, setSelectedMonth] = useState(monthNow);
-  const [manualForm, setManualForm] = useState<ManualForm>(() => emptyManual(today()));
+  const { selectedDate, selectedMonth, setSelectedDate, setSelectedMonth, goToToday } = useSharedCalendar();
+  const [manualForm, setManualForm] = useState<ManualForm>(() => emptyManual(selectedDate));
   const [aiMealType, setAiMealType] = useState<CalorieLog['mealType']>('breakfast');
   const [aiMealText, setAiMealText] = useState('');
   const [estimate, setEstimate] = useState<CalorieEstimate | null>(null);
@@ -226,16 +223,27 @@ export const CaloriesPage: React.FC = () => {
       void syncDietSlot(true);
     };
 
+    const handleCalorieSync = () => {
+      void refreshData();
+    };
+    const handleWorkoutSync = () => {
+      void refreshData();
+    };
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('fitnova:diet-sync', handleDietSync);
+    window.addEventListener('fitnova:calories-sync', handleCalorieSync);
+    window.addEventListener('fitnova:workout-sync', handleWorkoutSync);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('fitnova:diet-sync', handleDietSync);
+      window.removeEventListener('fitnova:calories-sync', handleCalorieSync);
+      window.removeEventListener('fitnova:workout-sync', handleWorkoutSync);
     };
-  }, [hasAppliedDietSlot]);
+  }, [hasAppliedDietSlot, selectedDate, selectedMonth]);
 
   const displayTargetCalories = useMemo(() => (
     dailyData?.targetCalories && dailyData.targetCalories > 0
@@ -565,6 +573,17 @@ export const CaloriesPage: React.FC = () => {
             The calorie logger is following your next active diet meal: <span className="font-semibold">{dietSlotLabel}</span>.
           </div>
         ) : null}
+        <Card className="space-y-4 rounded-[1.6rem] p-4 sm:p-5">
+          <LiveCalendar
+            selectedDate={selectedDate}
+            selectedMonth={selectedMonth}
+            onDateChange={setSelectedDate}
+            onMonthChange={setSelectedMonth}
+            onToday={goToToday}
+            subtitle="Diet, workouts, and calorie tracking now follow the same live date"
+            showMonthControls
+          />
+        </Card>
         {nextDietSlot ? (
           <Card variant="glass" className="space-y-4 rounded-[1.5rem] border border-[#00FF88]/15 p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -647,6 +666,11 @@ export const CaloriesPage: React.FC = () => {
               {dailyData.activeWorkoutDay.isTrainingDay
                 ? `Today's tracker is adjusted for ${dailyData.activeWorkoutDay.focus.toLowerCase()} training${dailyData.activeWorkoutDay.durationMinutes ? ` (${dailyData.activeWorkoutDay.durationMinutes} min)` : ''}.`
                 : 'Today is treated as a recovery day, so the tracker stays on your lower recovery target.'}
+            </p>
+          ) : null}
+          {dailyData?.activeWorkoutDay?.isCompleted ? (
+            <p className="mt-2 text-sm text-[#9ff9ca]">
+              The workout for this selected day is already marked complete and synced into your tracker context.
             </p>
           ) : null}
           {dailyData?.plannedNutritionDay ? (

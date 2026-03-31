@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { AppButton } from '@/components/AppButton';
 import { AppShell } from '@/components/AppShell';
@@ -16,6 +17,7 @@ type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   meta?: string;
+  createdAt: string;
 };
 
 const starterPrompts = [
@@ -23,6 +25,54 @@ const starterPrompts = [
   'Give me a simple fat-loss meal structure for a workday.',
   'My recovery has been slow lately. What should I change first?',
 ];
+
+function formatMessageTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function TypingIndicator() {
+  const opacity = useRef(new Animated.Value(0.25)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.25,
+          duration: 650,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+
+    return () => {
+      animation.stop();
+    };
+  }, [opacity]);
+
+  return (
+    <Animated.View style={[styles.typingWrap, { opacity }]}>
+      <View style={styles.typingDot} />
+      <View style={styles.typingDot} />
+      <View style={styles.typingDot} />
+    </Animated.View>
+  );
+}
 
 function mapHistory(items: AiInteraction[]): ChatMessage[] {
   return items
@@ -37,6 +87,7 @@ function mapHistory(items: AiInteraction[]): ChatMessage[] {
           id: `${interaction.id}-user`,
           role: 'user',
           content: promptMessage.trim(),
+          createdAt: interaction.createdAt,
         });
       }
 
@@ -46,6 +97,7 @@ function mapHistory(items: AiInteraction[]): ChatMessage[] {
           role: 'assistant',
           content: interaction.outputText.trim(),
           meta: `${interaction.provider} | ${interaction.model}`,
+          createdAt: interaction.createdAt,
         });
       }
 
@@ -134,6 +186,7 @@ export default function CoachScreen() {
       id: `user-${Date.now()}`,
       role: 'user',
       content: trimmed,
+      createdAt: new Date().toISOString(),
     };
 
     setMessages((current) => [...current, userMessage]);
@@ -148,6 +201,7 @@ export default function CoachScreen() {
         role: 'assistant',
         content: response.data.reply,
         meta: `${response.data.provider} | ${response.data.model}`,
+        createdAt: response.data.generatedAt,
       };
 
       setMessages((current) => [...current, assistantMessage]);
@@ -156,6 +210,7 @@ export default function CoachScreen() {
         id: `assistant-error-${Date.now()}`,
         role: 'assistant',
         content: 'I hit a temporary issue while generating a reply. Please try again in a moment.',
+        createdAt: new Date().toISOString(),
       };
 
       setMessages((current) => [...current, fallbackMessage]);
@@ -171,116 +226,157 @@ export default function CoachScreen() {
   };
 
   return (
-    <AppShell scroll={false}>
-      <SectionHeader
-        eyebrow="AI Coach"
-        title="Pocket coaching that actually feels live"
-        subtitle="Real mobile chat, recent history, and fast prompts for the moments when you need direction now."
-      />
+    <AppShell>
+      <KeyboardAvoidingView
+        style={styles.layout}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.topSection}>
+          <SectionHeader
+            eyebrow="AI Coach"
+            title="Pocket coaching that actually feels live"
+            subtitle="Real mobile chat, recent history, and fast prompts for the moments when you need direction now."
+          />
 
-      <Panel>
-        <View style={styles.headerRow}>
-          <View>
-            <AppText style={styles.title}>Coach status</AppText>
-            <AppText tone={hasPremiumAccess ? 'success' : 'muted'}>{statusLabel}</AppText>
-          </View>
-          <AppButton
-            variant="secondary"
-            onPress={() => {
-              setMessages([]);
-              setError(null);
-            }}
-          >
-            Clear
-          </AppButton>
-        </View>
-
-        {!hasPremiumAccess ? (
-          <View style={styles.gateCard}>
-            <AppText style={styles.gateTitle}>AI replies are a premium feature</AppText>
-            <AppText tone="muted">
-              The coach tab is live on mobile. Upgrade this account to unlock real reply generation, saved history, and weekly adjustment help.
-            </AppText>
-          </View>
-        ) : null}
-
-        <View style={styles.promptWrap}>
-          {starterPrompts.map((prompt) => (
-            <Pressable key={prompt} onPress={() => setMessage(prompt)} style={styles.promptChip}>
-              <AppText style={styles.promptText}>{prompt}</AppText>
-            </Pressable>
-          ))}
-        </View>
-      </Panel>
-
-      {error ? (
-        <Panel>
-          <AppText>{error}</AppText>
-        </Panel>
-      ) : null}
-
-      <Panel>
-        <AppText style={styles.title}>Conversation</AppText>
-        <ScrollView ref={scrollRef} style={styles.chatScroll} contentContainerStyle={styles.chatContent}>
-          {isHydrating ? <AppText tone="muted">Loading recent coach context...</AppText> : null}
-
-          {!messages.length && !isHydrating ? (
-            <View style={styles.emptyState}>
-              <AppText style={styles.emptyTitle}>Start with the thing blocking you most.</AppText>
-              <AppText tone="muted">
-                Ask about missed workouts, flat energy, slow recovery, or how to adjust this week.
-              </AppText>
+          <Panel>
+            <View style={styles.headerRow}>
+              <View>
+                <AppText style={styles.title}>Coach status</AppText>
+                <AppText tone={hasPremiumAccess ? 'success' : 'muted'}>{statusLabel}</AppText>
+              </View>
+              <AppButton
+                variant="secondary"
+                onPress={() => {
+                  setMessages([]);
+                  setError(null);
+                  setMessage('');
+                }}
+              >
+                New chat
+              </AppButton>
             </View>
-          ) : null}
 
-          {messages.map((entry) => (
-            <View
-              key={entry.id}
-              style={[
+            {!hasPremiumAccess ? (
+              <View style={styles.gateCard}>
+                <AppText style={styles.gateTitle}>AI replies are a premium feature</AppText>
+                <AppText tone="muted">
+                  The coach tab is live on mobile. Upgrade this account to unlock real reply generation, saved history, and weekly adjustment help.
+                </AppText>
+                <AppButton variant="secondary" onPress={() => router.push('/billing' as never)}>
+                  Unlock premium
+                </AppButton>
+              </View>
+            ) : null}
+
+            <View style={styles.promptWrap}>
+              {starterPrompts.map((prompt) => (
+                <Pressable key={prompt} onPress={() => setMessage(prompt)} style={styles.promptChip}>
+                  <AppText style={styles.promptText}>{prompt}</AppText>
+                </Pressable>
+              ))}
+            </View>
+          </Panel>
+
+          {error ? (
+            <Panel>
+              <AppText>{error}</AppText>
+            </Panel>
+          ) : null}
+        </View>
+
+        <Panel style={styles.chatPanel}>
+          <AppText style={styles.title}>Conversation</AppText>
+          <ScrollView
+            ref={scrollRef}
+            nestedScrollEnabled
+            style={styles.chatScroll}
+            contentContainerStyle={styles.chatContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {isHydrating ? <AppText tone="muted">Loading recent coach context...</AppText> : null}
+
+            {!messages.length && !isHydrating ? (
+              <View style={styles.emptyState}>
+                <AppText style={styles.emptyTitle}>Start with the thing blocking you most.</AppText>
+                <AppText tone="muted">
+                  Ask about missed workouts, flat energy, slow recovery, or how to adjust this week.
+                </AppText>
+              </View>
+            ) : null}
+
+            {messages.map((entry) => (
+              <View
+                key={entry.id}
+                style={[
                 styles.messageBubble,
                 entry.role === 'user' ? styles.userBubble : styles.assistantBubble,
               ]}
             >
               <AppText style={entry.role === 'user' ? styles.userText : undefined}>{entry.content}</AppText>
-              {entry.meta ? (
+              <View style={styles.messageMetaRow}>
+                {entry.meta ? (
+                  <AppText tone="muted" style={styles.meta}>
+                    {entry.meta}
+                  </AppText>
+                ) : <View />}
                 <AppText tone="muted" style={styles.meta}>
-                  {entry.meta}
+                  {formatMessageTime(entry.createdAt)}
                 </AppText>
-              ) : null}
+              </View>
             </View>
           ))}
 
           {isSending ? (
             <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <TypingIndicator />
               <AppText tone="muted">Coach is thinking...</AppText>
             </View>
           ) : null}
         </ScrollView>
       </Panel>
 
-      <Panel>
+      <Panel style={styles.composerPanel}>
         <AppText style={styles.title}>Ask the coach</AppText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickPromptRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          {starterPrompts.map((prompt) => (
+            <Pressable key={`composer-${prompt}`} onPress={() => setMessage(prompt)} style={styles.quickPromptChip}>
+              <AppText style={styles.quickPromptText}>{prompt}</AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
         <TextInput
           multiline
           value={message}
-          onChangeText={setMessage}
-          style={[styles.input, styles.textarea]}
-          placeholder="Ask about training, recovery, nutrition, or how to adjust your week..."
-          placeholderTextColor="#96A0B8"
-          textAlignVertical="top"
-        />
-        <AppText tone="muted" style={styles.helperText}>
-          Best results come from specific asks like missed sessions, low energy, slow recovery, or what to eat around training.
-        </AppText>
-        <AppButton onPress={() => void handleSend()} loading={isSending}>
-          Send message
-        </AppButton>
-      </Panel>
+            onChangeText={setMessage}
+            style={[styles.input, styles.textarea]}
+            placeholder="Ask about training, recovery, nutrition, or how to adjust your week..."
+            placeholderTextColor="#96A0B8"
+            textAlignVertical="top"
+          />
+          <AppText tone="muted" style={styles.helperText}>
+            Best results come from specific asks like missed sessions, low energy, slow recovery, or what to eat around training.
+          </AppText>
+          <AppButton onPress={() => void handleSend()} loading={isSending}>
+            Send message
+          </AppButton>
+        </Panel>
+      </KeyboardAvoidingView>
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
+  layout: {
+    gap: 14,
+  },
+  topSection: {
+    gap: 14,
+  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -310,11 +406,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  chatPanel: {
+    minHeight: 220,
+  },
   chatScroll: {
     maxHeight: 360,
   },
   chatContent: {
     gap: 12,
+    paddingBottom: 6,
   },
   emptyState: {
     gap: 8,
@@ -351,6 +451,12 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     textTransform: 'uppercase',
   },
+  messageMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
   input: {
     minHeight: 52,
     borderRadius: 18,
@@ -361,7 +467,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   textarea: {
-    minHeight: 140,
+    minHeight: 112,
+    maxHeight: 160,
     paddingTop: 14,
   },
   gateCard: {
@@ -380,5 +487,36 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  composerPanel: {
+    paddingBottom: 18,
+  },
+  quickPromptRow: {
+    gap: 10,
+    paddingBottom: 2,
+  },
+  quickPromptChip: {
+    maxWidth: 240,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  quickPromptText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  typingWrap: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#9CCBFF',
   },
 });

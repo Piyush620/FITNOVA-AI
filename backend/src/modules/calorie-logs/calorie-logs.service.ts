@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 
 import { resolveGoalCalorieTarget } from 'src/common/utils/calorie-target';
 import { User, UserDocument } from 'src/modules/auth/schemas/user.schema';
-import { DietPlan, DietPlanDocument } from 'src/modules/diet/schemas/diet-plan.schema';
+import { DietPlan, DietPlanDocument, DietPlanStatus } from 'src/modules/diet/schemas/diet-plan.schema';
 import { WorkoutPlan, WorkoutPlanDocument } from 'src/modules/workouts/schemas/workout-plan.schema';
 
 import { CreateCalorieLogDto } from './dto/create-calorie-log.dto';
@@ -39,12 +39,14 @@ export class CalorieLogsService {
   ) {}
 
   async createLog(userId: string, payload: CreateCalorieLogDto) {
+    const normalizedDate = this.normalizeDate(payload.loggedDate);
     const log = await this.calorieLogModel.create({
       userId: new Types.ObjectId(userId),
       ...payload,
       source: payload.source ?? 'manual',
-      loggedDate: this.normalizeDate(payload.loggedDate),
+      loggedDate: normalizedDate,
     });
+    await this.syncDietMealCompletionFromLogs(userId, normalizedDate, payload.mealType);
 
     return this.serializeDocument(log);
   }
@@ -58,6 +60,9 @@ export class CalorieLogsService {
     if (!log) {
       throw new NotFoundException('Calorie log not found.');
     }
+
+    const previousLoggedDate = log.loggedDate;
+    const previousMealType = log.mealType;
 
     if (payload.loggedDate) {
       log.loggedDate = this.normalizeDate(payload.loggedDate);
@@ -108,6 +113,12 @@ export class CalorieLogsService {
     }
 
     await log.save();
+    await this.syncDietMealCompletionFromLogs(userId, log.loggedDate, log.mealType);
+
+    if (previousLoggedDate !== log.loggedDate || previousMealType !== log.mealType) {
+      await this.syncDietMealCompletionFromLogs(userId, previousLoggedDate, previousMealType);
+    }
+
     return this.serializeDocument(log);
   }
 
@@ -120,6 +131,8 @@ export class CalorieLogsService {
     if (!result) {
       throw new NotFoundException('Calorie log not found.');
     }
+
+    await this.syncDietMealCompletionFromLogs(userId, result.loggedDate, result.mealType);
 
     return { deleted: true, id: logId };
   }
@@ -281,6 +294,8 @@ export class CalorieLogsService {
               focus: matchedWorkoutDay.focus,
               durationMinutes: matchedWorkoutDay.durationMinutes,
               isTrainingDay: true,
+              completedAt: matchedWorkoutDay.completedAt ?? null,
+              isCompleted: Boolean(matchedWorkoutDay.completedAt),
             }
           : null,
       };
@@ -324,12 +339,16 @@ export class CalorieLogsService {
             focus: matchedWorkoutDay.focus,
             durationMinutes: matchedWorkoutDay.durationMinutes,
             isTrainingDay: true,
+            completedAt: matchedWorkoutDay.completedAt ?? null,
+            isCompleted: Boolean(matchedWorkoutDay.completedAt),
           }
         : {
             dayLabel,
             focus: 'Recovery / rest',
             durationMinutes: 0,
             isTrainingDay: false,
+            completedAt: null,
+            isCompleted: false,
           },
     };
   }
@@ -410,6 +429,48 @@ export class CalorieLogsService {
     }
 
     return recommendations.slice(0, 3);
+  }
+
+  private async syncDietMealCompletionFromLogs(
+    userId: string,
+    loggedDate: string,
+    mealType: CalorieMealType,
+  ) {
+    if (mealType === 'other') {
+      return;
+    }
+
+    const objectId = new Types.ObjectId(userId);
+    const activeDietPlan = await this.dietPlanModel.findOne({ userId: objectId, status: 'active' });
+
+    if (!activeDietPlan) {
+      return;
+    }
+
+    const targetDate = new Date(`${loggedDate}T12:00:00.000Z`);
+    const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(targetDate);
+    const matchedDietDay = activeDietPlan.days.find((day) => day.dayLabel === dayLabel);
+
+    if (!matchedDietDay) {
+      return;
+    }
+
+    const matchedMeal = matchedDietDay.meals.find((meal) => meal.type === mealType);
+    if (!matchedMeal) {
+      return;
+    }
+
+    const hasLoggedMeal = await this.calorieLogModel.exists({
+      userId: objectId,
+      loggedDate,
+      mealType,
+    });
+
+    matchedMeal.completedAt = hasLoggedMeal ? matchedMeal.completedAt ?? targetDate : undefined;
+
+    const isPlanCompleted = activeDietPlan.days.every((day) => day.meals.every((meal) => !!meal.completedAt));
+    activeDietPlan.status = isPlanCompleted ? DietPlanStatus.COMPLETED : DietPlanStatus.ACTIVE;
+    await activeDietPlan.save();
   }
 
   private normalizeDate(value?: string) {

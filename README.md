@@ -22,7 +22,7 @@
 
 ## Vision
 
-FitNova AI is a fitness product that combines training plans, diet plans, progress tracking, calorie logging, and AI coaching in one web app.
+FitNova AI is a fitness product that combines training plans, diet plans, progress tracking, calorie logging, and AI coaching across one shared backend, a React web app, and an Expo mobile app.
 
 This repository currently contains:
 - a working NestJS + Fastify backend
@@ -39,6 +39,10 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 - training days can include recovery-focused post-workout meals automatically
 - the calorie tracker now explains whether today's target is coming from the active diet day, the active diet plan, or a workout-adjusted estimate
 - the workout detail flow now points users directly into building a matching diet plan
+- diet, workouts, and calories now share one live calendar date on both web and mobile
+- diet and workout detail screens now show one selected calendar day at a time instead of the whole plan at once
+- diet completion syncs into calorie tracking, and calorie meal logging syncs back into diet completion
+- previously used plans can be restored fresh instead of reopening with old completed state
 
 ## What Works Today
 
@@ -46,13 +50,25 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 
 - Sign up with email OTP verification, sign in, refresh session, and log out
 - View a real dashboard with workout, diet, calorie, and progress summary data
-- Generate, save, activate, view, restart, and progress workout plans
-- Generate, save, activate, view, restart, and progress diet plans
+- Generate, save, activate, restore fresh, view, restart, and progress workout plans
+- Generate, save, activate, restore fresh, view, restart, and progress diet plans
 - Open AI coach chat with saved history hydration
 - Log meals in plain language, let AI estimate calories/macros, confirm, and save
 - Review daily calorie totals and monthly calorie summaries
+- Use one shared live calendar across Diet, Workouts, and Calories
+- View one selected workout day and one selected meal day at a time
 - Edit profile data and avatar details
-- Sync diet planning and calorie tracking with the active workout split
+- Sync diet planning and calorie tracking with the active workout split and shared daily calendar
+
+### Mobile app flows
+
+- Sign in and use the real backend-backed dashboard, workouts, diet, calories, coach, and profile tabs
+- Use the same shared live calendar across Diet, Workouts, and Calories
+- View one selected workout day and one selected meal day at a time
+- Restore previously used workout and diet plans as fresh active cycles
+- Log meals from Diet into Calories and sync calorie meal logging back into Diet completion
+- See workout completion state reflected in the calorie tracker day context
+- Use AI coach chat with premium gating and saved history hydration
 
 ### Backend modules
 
@@ -95,10 +111,6 @@ FitNova now links training, nutrition, and calorie tracking more tightly:
 - AsyncStorage
 - Zustand
 - Axios
-
-### Still scaffold-only
-
-- Mobile app is now scaffolded with Expo Router, auth flow, and product tabs
 
 ## API Quick Links
 
@@ -389,7 +401,8 @@ NODE_ENV=development
 2. If you want nutrition matched to training demand, activate a workout split first
 3. Generate an AI diet plan using goal, food preference, timeline, and related inputs
 4. FitNova uses the active workout split to shape day calories, recovery support, and post-workout meal timing when applicable
-5. Save it, activate it, and mark meals complete from the detail screen
+5. Save it, activate it, and use the live calendar to work through one selected day at a time
+6. Mark meals complete from the detail screen and let those updates sync into Calories
 
 ### AI coach flow
 
@@ -400,12 +413,14 @@ NODE_ENV=development
 ### Calorie tracker flow
 
 1. Open `Calories`
-2. Describe what you ate in plain language
-3. Let AI estimate calories and macros
-4. Review the estimate
-5. Save the entry
-6. Check daily totals and monthly review cards
-7. If an active diet day or workout day exists, the tracker target adjusts and explains the source directly in the UI
+2. Use the live calendar to choose the day you want to review
+3. Describe what you ate in plain language
+4. Let AI estimate calories and macros
+5. Review the estimate
+6. Save the entry
+7. Check daily totals and monthly review cards
+8. If an active diet day or workout day exists, the tracker target adjusts and explains the source directly in the UI
+9. Matching calorie meal logs can mark the corresponding diet meal complete automatically
 
 Manual calorie entry still exists as a fallback mode.
 
@@ -497,9 +512,9 @@ stripe listen --forward-to localhost:4000/api/v1/subscriptions/webhook
 
 ## Current Gaps
 
-- Broader frontend integration coverage is still incomplete
-- Mobile app exists and several flows are live, but AI coach parity, notifications, and deeper mobile polish still need implementation
-- Mobile app exists with auth, dashboard, workouts, diet, calories, profile, coach chat, and reminder scaffolding, but it still needs local install/run verification and broader UX polish
+- Broader frontend and mobile integration coverage is still incomplete
+- Workout completion should still be synced into calorie history as directly as diet meal completion
+- Notifications and deeper mobile UX polish still need another pass
 
 ## Development Notes
 

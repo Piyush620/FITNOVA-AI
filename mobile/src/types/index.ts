@@ -19,6 +19,23 @@ export interface SubscriptionSummary {
   cancelAtPeriodEnd: boolean;
 }
 
+export interface SubscriptionConfigStatus {
+  stripeConfigured: boolean;
+  persistenceConfigured: boolean;
+  persistenceProvider: 'mongodb';
+  monthlyPriceConfigured: boolean;
+  yearlyPriceConfigured: boolean;
+}
+
+export interface CheckoutSessionResponse {
+  sessionId: string;
+  url: string | null;
+  userId: string;
+  requestedPlan: 'monthly' | 'yearly';
+  priceId: string;
+  stripeCustomerId: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -184,7 +201,7 @@ export interface CalorieLog {
     | 'post-workout'
     | 'other';
   title: string;
-  source?: 'manual' | 'ai';
+  source?: 'manual' | 'ai' | 'diet-plan';
   rawInput?: string;
   calories: number;
   proteinGrams?: number;
@@ -192,6 +209,11 @@ export interface CalorieLog {
   fatsGrams?: number;
   notes?: string;
   confidence?: number;
+  parsedItems?: Array<{
+    name: string;
+    quantity?: string;
+    estimatedCalories?: number;
+  }>;
   createdAt: string;
   updatedAt?: string;
 }
@@ -200,6 +222,19 @@ export interface DailyCalorieLogResponse {
   date: string;
   targetCalories: number;
   targetSource?: 'active-diet-day' | 'active-diet-plan' | 'workout-adjusted-estimate' | 'goal-estimate';
+  plannedNutritionDay?: {
+    dayLabel: string;
+    theme?: string;
+    targetCalories: number;
+  } | null;
+  activeWorkoutDay?: {
+    dayLabel: string;
+    focus: string;
+    durationMinutes?: number;
+    isTrainingDay: boolean;
+    completedAt?: string | null;
+    isCompleted?: boolean;
+  } | null;
   totals: {
     calories: number;
     proteinGrams: number;
@@ -207,6 +242,29 @@ export interface DailyCalorieLogResponse {
     fatsGrams: number;
   };
   entries: CalorieLog[];
+}
+
+export interface MonthlyCalorieSummary {
+  month: string;
+  targetCalories: number;
+  totalCalories: number;
+  averageDailyCalories: number;
+  averageLoggedDayCalories: number;
+  averageProteinGrams: number;
+  averageCarbsGrams: number;
+  averageFatsGrams: number;
+  daysLogged: number;
+  daysInMonth: number;
+  entriesCount: number;
+  dailyBreakdown: Array<{
+    date: string;
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatsGrams: number;
+    entryCount: number;
+  }>;
+  recommendations: string[];
 }
 
 export interface CalorieEstimateItem {
@@ -228,6 +286,15 @@ export interface CalorieEstimate {
   fatsGrams: number;
   notes?: string;
   parsedItems: CalorieEstimateItem[];
+}
+
+export interface CalorieInsightsResponse {
+  type: 'calorie-insights';
+  provider: 'gemini' | 'openai';
+  model: string;
+  month: string;
+  content: string;
+  generatedAt: string;
 }
 
 export interface AiInteraction {

@@ -14,7 +14,7 @@ export const calorieMealTypes = [
 ] as const;
 
 export type CalorieMealType = (typeof calorieMealTypes)[number];
-export const calorieLogSources = ['manual', 'ai'] as const;
+export const calorieLogSources = ['manual', 'ai', 'diet-plan'] as const;
 export type CalorieLogSource = (typeof calorieLogSources)[number];
 
 @Schema({ _id: false })

@@ -105,6 +105,7 @@ export default function ProfileScreen() {
       <Panel>
         <AppText style={styles.title}>Account</AppText>
         <AppText tone="muted">{user?.subscription?.hasPremiumAccess ? 'Premium access active' : 'Free plan'}</AppText>
+        <AppButton variant="secondary" onPress={() => router.push('/billing' as never)}>Billing & subscription</AppButton>
         <AppButton variant="secondary" onPress={() => void handleLogout()}>Log out</AppButton>
       </Panel>
     </AppShell>
