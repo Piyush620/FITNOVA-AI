@@ -332,12 +332,23 @@ export interface DashboardSummary {
   activeWorkoutPlan: {
     id: string;
     title: string;
+    goal: string;
+    level: string;
     status: WorkoutPlan['status'];
+    startDate?: string;
+    endDate?: string;
+    daysCount: number;
   } | null;
   activeDietPlan: {
     id: string;
     title: string;
+    goal: string;
+    preference: DietPlan['preference'];
     status: DietPlan['status'];
+    targetCalories: number | null;
+    startDate?: string;
+    endDate?: string;
+    daysCount: number;
   } | null;
   progressSummary: {
     totalCheckIns: number;

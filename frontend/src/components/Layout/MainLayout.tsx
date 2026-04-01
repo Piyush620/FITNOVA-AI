@@ -9,7 +9,7 @@ interface LayoutProps {
 export const MainLayout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="theme-shell relative flex min-h-screen flex-col overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 opacity-25">
+      <div className="pointer-events-none absolute inset-0 opacity-10">
         <div className="ambient-grid absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:96px_96px] [mask-image:radial-gradient(circle_at_center,black,transparent_82%)]" />
       </div>
       <Header />

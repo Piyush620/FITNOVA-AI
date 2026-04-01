@@ -32,6 +32,26 @@ export const formatDateLabel = (value: string) => {
   return new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
 };
 
+export const formatAbsoluteDateLabel = (value?: string | null) => {
+  if (!value) return 'N/A';
+
+  const dateOnlyMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateOnlyMatch) {
+    return formatDateLabel(dateOnlyMatch[1]);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'N/A';
+  }
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
+
 export const formatMonthLabel = (value: string) => {
   const date = parseMonthValue(value);
   if (!date) return 'Select a valid month';

@@ -5,9 +5,9 @@ import { MainLayout } from '../components/Layout';
 import { Breadcrumbs, Button, Card, Input, Select, Textarea } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage, usersAPI } from '../services/api';
+import { formatAbsoluteDateLabel } from '../utils/calendar';
 import { toastError, toastSuccess } from '../utils/toast';
 import type { DashboardSummary } from '../types';
-import heroImage from '../assets/hero.png';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -49,6 +49,25 @@ const getInitials = (name?: string, email?: string) => {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('') || 'F';
 };
 
+const formatPlanStatus = (status?: string) => {
+  if (!status) return 'Draft';
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const formatSubscriptionPlan = (plan?: string | null) => {
+  switch (plan) {
+    case 'monthly':
+      return 'Monthly';
+    case 'yearly':
+      return 'Yearly';
+    default:
+      return 'Free';
+  }
+};
+
+const formatSubscriptionTier = (hasPremiumAccess?: boolean) =>
+  hasPremiumAccess ? 'Premium' : 'Free';
+
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -85,32 +104,55 @@ export const ProfilePage: React.FC = () => {
       void loadProfilePage();
     }
 
-    const handleFocus = () => {
-      if (isAuthenticated) {
-        void loadProfilePage();
+    let refreshTimeout: number | null = null;
+    const scheduleProfileRefresh = () => {
+      if (!isAuthenticated) {
+        return;
       }
+
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = window.setTimeout(() => {
+        refreshTimeout = null;
+        void loadProfilePage();
+      }, 80);
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'fitnova-calories-sync' && isAuthenticated) {
-        void loadProfilePage();
+      if (
+        event.key === 'fitnova-calories-sync' ||
+        event.key === 'fitnova-diet-sync' ||
+        event.key === 'fitnova-workout-sync'
+      ) {
+        scheduleProfileRefresh();
       }
     };
 
     const handleCaloriesSync = () => {
-      if (isAuthenticated) {
-        void loadProfilePage();
-      }
+      scheduleProfileRefresh();
+    };
+    const handleDietSync = () => {
+      scheduleProfileRefresh();
+    };
+    const handleWorkoutSync = () => {
+      scheduleProfileRefresh();
     };
 
-    window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('fitnova:calories-sync', handleCaloriesSync);
+    window.addEventListener('fitnova:diet-sync', handleDietSync);
+    window.addEventListener('fitnova:workout-sync', handleWorkoutSync);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('fitnova:calories-sync', handleCaloriesSync);
+      window.removeEventListener('fitnova:diet-sync', handleDietSync);
+      window.removeEventListener('fitnova:workout-sync', handleWorkoutSync);
     };
   }, [isAuthenticated]);
 
@@ -317,63 +359,82 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <Card className="overflow-hidden p-0">
-              <div className="relative min-h-full">
-                <img
-                  src={avatarPreview || heroImage}
-                  alt="Profile visual"
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,5,5,0.18)_0%,rgba(5,5,5,0.56)_46%,rgba(5,5,5,0.94)_100%)]" />
-                <div className="absolute inset-0 flex flex-col justify-between p-6">
-                  <div>
-                    <div className="inline-flex rounded-full border border-white/10 bg-black/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FF88] backdrop-blur">
-                      Identity Panel
-                    </div>
-                    <p className="mt-4 text-sm text-[#d4d9e4]">Account email</p>
-                    <p className="mt-1 text-xl font-semibold text-[#F7F7F7]">{user?.email}</p>
+            <Card className="space-y-5 p-6">
+              <div className="flex items-center gap-4">
+                {avatarPreview ? (
+                  <img
+                    src={avatarPreview}
+                    alt={formData.fullName || 'Profile'}
+                    className="h-16 w-16 rounded-2xl border border-[#2e303a] object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#11131d] text-xl font-bold text-[#F7F7F7]">
+                    {getInitials(formData.fullName, user?.email)}
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Goal</p>
-                        <p className="mt-2 text-base font-semibold capitalize text-[#F7F7F7]">
-                          {dashboard?.goal || formData.goal || 'Not set'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Activity level</p>
-                        <p className="mt-2 text-base font-semibold capitalize text-[#F7F7F7]">
-                          {dashboard?.activityLevel || formData.activityLevel}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Active workout</p>
-                        <p className="mt-2 text-base font-semibold text-[#F7F7F7]">
-                          {dashboard?.activeWorkoutPlan?.title || 'No active workout'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur">
-                        <p className="text-sm text-[#cbd1de]">Active diet</p>
-                        <p className="mt-2 text-base font-semibold text-[#F7F7F7]">
-                          {dashboard?.activeDietPlan?.title || 'No active diet'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <Button variant="secondary" onClick={() => navigate('/dashboard')}>
-                        Dashboard
-                      </Button>
-                      <Button variant="secondary" onClick={() => navigate('/workouts')}>
-                        Workouts
-                      </Button>
-                      <Button variant="secondary" onClick={() => navigate('/diet')}>
-                        Diet
-                      </Button>
-                    </div>
-                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Identity Panel</p>
+                  <h2 className="mt-2 text-2xl font-bold text-[#F7F7F7]">{formData.fullName || user?.email}</h2>
+                  <p className="mt-1 text-sm text-[#98a3b8]">{user?.email}</p>
                 </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Goal</p>
+                  <p className="mt-2 text-lg font-semibold capitalize text-[#F7F7F7]">
+                    {dashboard?.goal || formData.goal || 'Not set'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Activity level</p>
+                  <p className="mt-2 text-lg font-semibold capitalize text-[#F7F7F7]">
+                    {dashboard?.activityLevel || formData.activityLevel}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Active workout</p>
+                  <p className="mt-2 text-base font-semibold leading-7 text-[#F7F7F7]">
+                    {dashboard?.activeWorkoutPlan?.title || 'No active workout'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Active diet</p>
+                  <p className="mt-2 text-base font-semibold leading-7 text-[#F7F7F7]">
+                    {dashboard?.activeDietPlan?.title || 'No active diet'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Subscription plan</p>
+                    <p className="mt-2 text-lg font-semibold text-[#F7F7F7]">
+                      {formatSubscriptionPlan(user?.subscription?.plan)}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-[#00FF88]/30 bg-[#00FF88]/10 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#9ff9ca]">
+                    {formatSubscriptionTier(user?.subscription?.hasPremiumAccess)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-[#98a3b8]">
+                  {user?.subscription?.currentPeriodEnd
+                    ? `Renews on ${formatAbsoluteDateLabel(user.subscription.currentPeriodEnd)}.`
+                    : 'No active renewal date yet.'}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Button variant="secondary" onClick={() => navigate('/dashboard')}>
+                  Dashboard
+                </Button>
+                <Button variant="secondary" onClick={() => navigate('/workouts')}>
+                  Workouts
+                </Button>
+                <Button variant="secondary" onClick={() => navigate('/diet')}>
+                  Diet
+                </Button>
               </div>
             </Card>
           </div>
@@ -506,8 +567,69 @@ export const ProfilePage: React.FC = () => {
                 <div className="rounded-xl border border-[#2e303a] bg-[#11131d] p-4">
                   <p className="text-sm text-gray-400">Next check-in</p>
                   <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
-                    {dashboard?.nextCheckIn ? new Date(dashboard.nextCheckIn).toLocaleDateString() : 'N/A'}
+                    {formatAbsoluteDateLabel(dashboard?.nextCheckIn)}
                   </p>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="space-y-5">
+              <h2 className="text-2xl font-bold text-[#F7F7F7]">Selected Plans</h2>
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-gray-400">Workout plan</p>
+                      <p className="mt-2 text-xl font-semibold text-[#F7F7F7]">
+                        {dashboard?.activeWorkoutPlan?.title || 'No active workout'}
+                      </p>
+                    </div>
+                    {dashboard?.activeWorkoutPlan ? (
+                      <span className="rounded-full border border-[#00FF88]/30 bg-[#00FF88]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#9ff9ca]">
+                        {formatPlanStatus(dashboard.activeWorkoutPlan.status)}
+                      </span>
+                    ) : null}
+                  </div>
+                  {dashboard?.activeWorkoutPlan ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <p className="text-sm text-[#c6cede]">Goal: <span className="text-[#F7F7F7]">{dashboard.activeWorkoutPlan.goal}</span></p>
+                      <p className="text-sm text-[#c6cede]">Level: <span className="text-[#F7F7F7]">{dashboard.activeWorkoutPlan.level}</span></p>
+                      <p className="text-sm text-[#c6cede]">Days: <span className="text-[#F7F7F7]">{dashboard.activeWorkoutPlan.daysCount}</span></p>
+                      <p className="text-sm text-[#c6cede]">Start: <span className="text-[#F7F7F7]">{formatAbsoluteDateLabel(dashboard.activeWorkoutPlan.startDate)}</span></p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm leading-6 text-[#98a3b8]">
+                      Activate a workout plan and its selected details will appear here.
+                    </p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-gray-400">Diet plan</p>
+                      <p className="mt-2 text-xl font-semibold text-[#F7F7F7]">
+                        {dashboard?.activeDietPlan?.title || 'No active diet'}
+                      </p>
+                    </div>
+                    {dashboard?.activeDietPlan ? (
+                      <span className="rounded-full border border-[#00FF88]/30 bg-[#00FF88]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#9ff9ca]">
+                        {formatPlanStatus(dashboard.activeDietPlan.status)}
+                      </span>
+                    ) : null}
+                  </div>
+                  {dashboard?.activeDietPlan ? (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <p className="text-sm text-[#c6cede]">Goal: <span className="text-[#F7F7F7]">{dashboard.activeDietPlan.goal}</span></p>
+                      <p className="text-sm text-[#c6cede]">Preference: <span className="text-[#F7F7F7]">{dashboard.activeDietPlan.preference}</span></p>
+                      <p className="text-sm text-[#c6cede]">Days: <span className="text-[#F7F7F7]">{dashboard.activeDietPlan.daysCount}</span></p>
+                      <p className="text-sm text-[#c6cede]">Target: <span className="text-[#F7F7F7]">{dashboard.activeDietPlan.targetCalories ?? 'N/A'} kcal</span></p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm leading-6 text-[#98a3b8]">
+                      Activate a diet plan and its selected details will appear here.
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -517,6 +639,10 @@ export const ProfilePage: React.FC = () => {
               <div className="space-y-3 text-sm text-gray-300">
                 <p>Age, gender, activity level, weight, and goal from this page are used to shape your AI plans.</p>
                 <p>Update them here whenever your body stats or goal changes so new workout and diet plans stay relevant.</p>
+                <p>
+                  Current billing plan: <span className="font-semibold text-[#F7F7F7]">{formatSubscriptionPlan(user?.subscription?.plan)}</span>
+                  {' '}({formatSubscriptionTier(user?.subscription?.hasPremiumAccess)}).
+                </p>
               </div>
             </Card>
           </div>

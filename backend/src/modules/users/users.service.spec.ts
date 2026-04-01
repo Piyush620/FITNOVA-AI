@@ -231,15 +231,25 @@ describe('UsersService', () => {
         lean: jest.fn().mockResolvedValue({
           _id: { toString: () => 'workout-plan-id' },
           title: 'Spring Cut',
+          goal: 'fat loss',
+          level: 'intermediate',
           status: 'active',
+          startDate: new Date('2026-03-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-24T00:00:00.000Z'),
+          days: [{}, {}],
         }),
       });
       mockDietPlanModel.findOne.mockReturnValue({
         lean: jest.fn().mockResolvedValue({
           _id: { toString: () => 'diet-plan-id' },
           title: 'High Protein Plan',
+          goal: 'fat loss',
+          preference: 'veg',
           status: 'active',
           targetCalories: 2100,
+          startDate: new Date('2026-03-01T00:00:00.000Z'),
+          endDate: new Date('2026-05-24T00:00:00.000Z'),
+          days: [{}],
         }),
       });
       mockWorkoutPlanModel.find.mockReturnValue({
@@ -274,9 +284,11 @@ describe('UsersService', () => {
               energyLevel: 8,
               moodScore: 7,
               sleepQuality: 6,
+              createdAt: new Date('2026-03-20T09:00:00.000Z'),
             },
             {
               weightKg: 82,
+              createdAt: new Date('2026-03-13T09:00:00.000Z'),
             },
           ]),
         }),
@@ -302,16 +314,85 @@ describe('UsersService', () => {
       expect(result.totalMeals).toBe(2);
       expect(result.todaysCalories).toBe(1450);
       expect(result.monthlyAverageCalories).toBe(2000);
+      expect(result.nextCheckIn).toBe('2027-03-20');
       expect(result.activeWorkoutPlan).toEqual({
         id: 'workout-plan-id',
         title: 'Spring Cut',
+        goal: 'fat loss',
+        level: 'intermediate',
         status: 'active',
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-24T00:00:00.000Z'),
+        daysCount: 2,
       });
       expect(result.activeDietPlan).toEqual({
         id: 'diet-plan-id',
         title: 'High Protein Plan',
+        goal: 'fat loss',
+        preference: 'veg',
         status: 'active',
+        targetCalories: 2100,
+        startDate: new Date('2026-03-01T00:00:00.000Z'),
+        endDate: new Date('2026-05-24T00:00:00.000Z'),
+        daysCount: 1,
       });
+    });
+
+    it('uses the subscription end date for next check-in when available', async () => {
+      const userId = '507f1f77bcf86cd799439011';
+      const user = {
+        _id: { toString: () => userId },
+        email: 'subscriber@example.com',
+        profile: {
+          fullName: 'Subscriber User',
+          weightKg: 70,
+          goal: 'fat loss',
+          activityLevel: 'moderate',
+        },
+      };
+
+      mockSubscriptionsService.getCurrentSubscription.mockResolvedValueOnce({
+        tier: 'premium',
+        plan: 'monthly',
+        status: 'active',
+        hasPremiumAccess: true,
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        currentPeriodStart: '2026-04-01T00:00:00.000Z',
+        currentPeriodEnd: '2026-05-01T00:00:00.000Z',
+        cancelAtPeriodEnd: false,
+      });
+      mockUserModel.findById.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(user),
+      });
+      mockWorkoutPlanModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      mockDietPlanModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      mockWorkoutPlanModel.find.mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      });
+      mockDietPlanModel.find.mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      });
+      mockProgressCheckInModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue([]),
+        }),
+      });
+      mockCalorieLogModel.find
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValue([]),
+        })
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValue([]),
+        });
+
+      const result = await service.getDashboardSnapshot(userId);
+
+      expect(result.nextCheckIn).toBe('2026-05-01');
     });
 
     it('uses a goal-aware fallback calorie target when no active diet target exists', async () => {
@@ -362,6 +443,11 @@ describe('UsersService', () => {
 
       expect(result.caloriesTarget).toBe(3300);
       expect(result.remainingCalories).toBe(2400);
+      const expectedNextCheckIn = new Date();
+      expectedNextCheckIn.setHours(12, 0, 0, 0);
+      expectedNextCheckIn.setFullYear(expectedNextCheckIn.getFullYear() + 1);
+
+      expect(result.nextCheckIn).toBe(expectedNextCheckIn.toISOString().slice(0, 10));
     });
 
     it('uses the active diet target directly when a diet plan is active', async () => {

@@ -86,8 +86,9 @@ export class UsersService {
     const today = new Date().toISOString().slice(0, 10);
     const currentMonth = today.slice(0, 7);
 
-    const [activeWorkoutPlan, activeDietPlan, allWorkoutPlans, allDietPlans, progressHistory, todaysLogs, monthlyLogs] =
+    const [subscription, activeWorkoutPlan, activeDietPlan, allWorkoutPlans, allDietPlans, progressHistory, todaysLogs, monthlyLogs] =
       await Promise.all([
+        this.subscriptionsService.getCurrentSubscription(userId),
         this.workoutPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
         this.dietPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
         this.workoutPlanModel.find({ userId: objectId }).lean(),
@@ -167,14 +168,25 @@ export class UsersService {
         ? {
             id: activeWorkoutPlan._id.toString(),
             title: activeWorkoutPlan.title,
+            goal: activeWorkoutPlan.goal,
+            level: activeWorkoutPlan.level,
             status: activeWorkoutPlan.status,
+            startDate: activeWorkoutPlan.startDate,
+            endDate: activeWorkoutPlan.endDate,
+            daysCount: activeWorkoutPlan.days?.length ?? 0,
           }
         : null,
       activeDietPlan: activeDietPlan
         ? {
             id: activeDietPlan._id.toString(),
             title: activeDietPlan.title,
+            goal: activeDietPlan.goal,
+            preference: activeDietPlan.preference,
             status: activeDietPlan.status,
+            targetCalories: activeDietPlan.targetCalories ?? null,
+            startDate: activeDietPlan.startDate,
+            endDate: activeDietPlan.endDate,
+            daysCount: activeDietPlan.days?.length ?? 0,
           }
         : null,
       progressSummary: {
@@ -187,7 +199,9 @@ export class UsersService {
             ? Number((currentWeight - startingWeight).toFixed(1))
             : null,
       },
-      nextCheckIn: this.getNextCheckInDate(),
+      nextCheckIn: subscription.currentPeriodEnd
+        ? this.toDateOnlyValue(subscription.currentPeriodEnd)
+        : this.getNextCheckInDate(progressHistory[0]?.createdAt),
     };
   }
 
@@ -244,9 +258,37 @@ export class UsersService {
     return Math.round((workoutCompletionRate + dietCompletionRate) / 2);
   }
 
-  private getNextCheckInDate() {
-    const nextCheckIn = new Date();
-    nextCheckIn.setDate(nextCheckIn.getDate() + 7);
-    return nextCheckIn.toISOString();
+  private getNextCheckInDate(baseDate?: Date | string | null) {
+    if (!baseDate) {
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      today.setFullYear(today.getFullYear() + 1);
+      return today.toISOString().slice(0, 10);
+    }
+
+    const nextCheckIn = new Date(baseDate);
+    if (Number.isNaN(nextCheckIn.getTime())) {
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      today.setFullYear(today.getFullYear() + 1);
+      return today.toISOString().slice(0, 10);
+    }
+
+    nextCheckIn.setHours(12, 0, 0, 0);
+    nextCheckIn.setFullYear(nextCheckIn.getFullYear() + 1);
+    return nextCheckIn.toISOString().slice(0, 10);
+  }
+
+  private toDateOnlyValue(value?: Date | string | null) {
+    if (!value) {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    return date.toISOString().slice(0, 10);
   }
 }

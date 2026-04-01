@@ -23,7 +23,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses =
-      'theme-button group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-[1.1rem] border text-sm font-semibold tracking-[0.01em] transition-all duration-300 motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ef7c7] focus-visible:ring-offset-2';
+      'theme-button group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-[1.1rem] border text-sm font-semibold tracking-[0.01em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ef7c7] focus-visible:ring-offset-2';
 
     const variantClasses = {
       primary: 'theme-button-primary',
@@ -51,9 +51,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        <span className="theme-button-sheen pointer-events-none absolute inset-0 transition-opacity duration-500">
-          <span className="theme-button-sheen-band absolute inset-y-0 left-[-20%] w-1/3 motion-safe:group-hover:[animation:sheenSlide_900ms_ease]" />
-        </span>
         {isLoading && (
           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
         )}

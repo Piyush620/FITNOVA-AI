@@ -178,8 +178,16 @@ export const WorkoutsPage: React.FC = () => {
       return;
     }
 
+    let refreshTimeout: number | null = null;
     const refresh = () => {
-      void loadPlans(false, 1);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = window.setTimeout(() => {
+        refreshTimeout = null;
+        void loadPlans(false, 1);
+      }, 80);
     };
 
     const handleStorage = (event: StorageEvent) => {
@@ -188,13 +196,14 @@ export const WorkoutsPage: React.FC = () => {
       }
     };
 
-    window.addEventListener('focus', refresh);
     window.addEventListener('fitnova:calories-sync', refresh);
     window.addEventListener('fitnova:workout-sync', refresh);
     window.addEventListener('storage', handleStorage);
 
     return () => {
-      window.removeEventListener('focus', refresh);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
       window.removeEventListener('fitnova:calories-sync', refresh);
       window.removeEventListener('fitnova:workout-sync', refresh);
       window.removeEventListener('storage', handleStorage);

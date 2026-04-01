@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance } from 'axios';
+import type { AxiosResponse } from 'axios';
 import type {
   User,
   LoginPayload,
@@ -105,6 +106,40 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
+const inflightGetRequests = new Map<string, Promise<AxiosResponse>>();
+
+const buildGetRequestKey = (path: string, params?: Record<string, unknown>) => {
+  const normalizedParams = params
+    ? Object.entries(params)
+        .filter(([, value]) => value !== undefined && value !== null && value !== '')
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    : [];
+
+  return normalizedParams.length > 0
+    ? `${path}?${JSON.stringify(normalizedParams)}`
+    : path;
+};
+
+const dedupeGetRequest = <T>(
+  path: string,
+  request: () => Promise<AxiosResponse<T>>,
+  params?: Record<string, unknown>,
+) => {
+  const key = buildGetRequestKey(path, params);
+  const existingRequest = inflightGetRequests.get(key) as Promise<AxiosResponse<T>> | undefined;
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const nextRequest = request().finally(() => {
+    inflightGetRequests.delete(key);
+  });
+
+  inflightGetRequests.set(key, nextRequest as Promise<AxiosResponse>);
+  return nextRequest;
+};
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
@@ -161,13 +196,14 @@ export const authAPI = {
   resendEmailOtp: (email: string) =>
     apiClient.post<PendingVerificationResponse>('/auth/resend-email-otp', { email }),
 
-  getCurrentUser: () => apiClient.get<User>('/auth/me'),
+  getCurrentUser: () => dedupeGetRequest('/auth/me', () => apiClient.get<User>('/auth/me')),
 };
 
 export const usersAPI = {
   getProfile: () => apiClient.get<User>('/users/me'),
 
-  getDashboard: () => apiClient.get<DashboardSummary>('/users/me/dashboard'),
+  getDashboard: () =>
+    dedupeGetRequest('/users/me/dashboard', () => apiClient.get<DashboardSummary>('/users/me/dashboard')),
 
   updateProfile: (payload: UpdateUserProfilePayload) =>
     apiClient.patch<User>('/users/me', payload),
@@ -177,7 +213,8 @@ export const workoutsAPI = {
   listPlans: (page = 1, limit = 10) =>
     apiClient.get<PaginatedResponse<WorkoutPlan>>('/workouts/plans', { params: { page, limit } }),
 
-  getActivePlan: () => apiClient.get<WorkoutPlan>('/workouts/plans/active'),
+  getActivePlan: () =>
+    dedupeGetRequest('/workouts/plans/active', () => apiClient.get<WorkoutPlan>('/workouts/plans/active')),
 
   getPlan: (planId: string) => apiClient.get<WorkoutPlan>(`/workouts/plans/${planId}`),
 
@@ -197,7 +234,8 @@ export const dietAPI = {
   listPlans: (page = 1, limit = 10) =>
     apiClient.get<PaginatedResponse<DietPlan>>('/diet/plans', { params: { page, limit } }),
 
-  getActivePlan: () => apiClient.get<DietPlan>('/diet/plans/active'),
+  getActivePlan: () =>
+    dedupeGetRequest('/diet/plans/active', () => apiClient.get<DietPlan>('/diet/plans/active')),
 
   getPlan: (planId: string) => apiClient.get<DietPlan>(`/diet/plans/${planId}`),
 
@@ -224,10 +262,18 @@ export const caloriesAPI = {
     apiClient.delete<{ deleted: boolean; id: string }>(`/calorie-logs/${logId}`),
 
   getDaily: (date?: string) =>
-    apiClient.get<DailyCalorieLogResponse>('/calorie-logs/daily', { params: { date } }),
+    dedupeGetRequest(
+      '/calorie-logs/daily',
+      () => apiClient.get<DailyCalorieLogResponse>('/calorie-logs/daily', { params: { date } }),
+      { date },
+    ),
 
   getMonthlySummary: (month?: string) =>
-    apiClient.get<MonthlyCalorieSummary>('/calorie-logs/monthly-summary', { params: { month } }),
+    dedupeGetRequest(
+      '/calorie-logs/monthly-summary',
+      () => apiClient.get<MonthlyCalorieSummary>('/calorie-logs/monthly-summary', { params: { month } }),
+      { month },
+    ),
 };
 
 export const progressAPI = {

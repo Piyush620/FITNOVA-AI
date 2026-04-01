@@ -6,6 +6,7 @@ import { Breadcrumbs, Button, Card } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { getApiErrorMessage, usersAPI } from '../services/api';
 import { estimateGoalCalories } from '../utils/calorieTarget';
+import { formatAbsoluteDateLabel } from '../utils/calendar';
 import type { DashboardSummary } from '../types';
 
 type ApiErrorResponse = {
@@ -41,28 +42,51 @@ export const DashboardPage: React.FC = () => {
 
     void fetchDashboard();
 
-    const handleFocus = () => {
-      void fetchDashboard();
+    let refreshTimeout: number | null = null;
+    const scheduleDashboardRefresh = () => {
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = window.setTimeout(() => {
+        refreshTimeout = null;
+        void fetchDashboard();
+      }, 80);
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'fitnova-calories-sync') {
-        void fetchDashboard();
+      if (
+        event.key === 'fitnova-calories-sync' ||
+        event.key === 'fitnova-diet-sync' ||
+        event.key === 'fitnova-workout-sync'
+      ) {
+        scheduleDashboardRefresh();
       }
     };
 
     const handleCaloriesSync = () => {
-      void fetchDashboard();
+      scheduleDashboardRefresh();
+    };
+    const handleDietSync = () => {
+      scheduleDashboardRefresh();
+    };
+    const handleWorkoutSync = () => {
+      scheduleDashboardRefresh();
     };
 
-    window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('fitnova:calories-sync', handleCaloriesSync);
+    window.addEventListener('fitnova:diet-sync', handleDietSync);
+    window.addEventListener('fitnova:workout-sync', handleWorkoutSync);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('fitnova:calories-sync', handleCaloriesSync);
+      window.removeEventListener('fitnova:diet-sync', handleDietSync);
+      window.removeEventListener('fitnova:workout-sync', handleWorkoutSync);
     };
   }, [isAuthenticated, navigate]);
 
@@ -330,7 +354,7 @@ export const DashboardPage: React.FC = () => {
               <Card className="space-y-2">
                 <p className="text-sm text-gray-400">Next Check-in</p>
                 <p className="text-xl font-semibold text-[#F7F7F7]">
-                  {new Date(dashboard.nextCheckIn).toLocaleDateString()}
+                  {formatAbsoluteDateLabel(dashboard.nextCheckIn)}
                 </p>
               </Card>
               <Card className="space-y-2">

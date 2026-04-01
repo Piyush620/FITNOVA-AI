@@ -115,8 +115,7 @@ describe('ProtectedRoute', () => {
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
   });
 
-  it('should call getCurrentUser if not authenticated and not loading', () => {
-    const mockGetCurrentUser = vi.fn();
+  it('should keep showing loading state while a stored session is being resolved', () => {
     mockUseAuth.mockReturnValue({
       user: null,
       accessToken: 'token',
@@ -130,12 +129,12 @@ describe('ProtectedRoute', () => {
       verifyEmailOtp: vi.fn(),
       resendEmailOtp: vi.fn(),
       logout: vi.fn(),
-      getCurrentUser: mockGetCurrentUser,
+      getCurrentUser: vi.fn(),
       clearError: vi.fn(),
       setTokens: vi.fn(),
     });
 
-    render(
+    const { container } = render(
       <BrowserRouter>
         <ProtectedRoute>
           <div>Protected Content</div>
@@ -143,6 +142,7 @@ describe('ProtectedRoute', () => {
       </BrowserRouter>,
     );
 
-    expect(mockGetCurrentUser).toHaveBeenCalled();
+    const loadingDiv = container.querySelector('.animate-spin');
+    expect(loadingDiv).toBeInTheDocument();
   });
 });

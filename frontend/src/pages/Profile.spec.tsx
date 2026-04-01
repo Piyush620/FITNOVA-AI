@@ -88,8 +88,27 @@ describe('ProfilePage', () => {
         completedWorkoutsThisWeek: 4,
         completedMeals: 18,
         totalMeals: 28,
-        activeWorkoutPlan: { id: 'w1', title: 'Lean Split', status: 'active' },
-        activeDietPlan: { id: 'd1', title: 'Cut Phase', status: 'active' },
+        activeWorkoutPlan: {
+          id: 'w1',
+          title: 'Lean Split',
+          goal: 'fat loss',
+          level: 'intermediate',
+          status: 'active',
+          startDate: '2026-03-01',
+          endDate: '2026-05-24',
+          daysCount: 4,
+        },
+        activeDietPlan: {
+          id: 'd1',
+          title: 'Cut Phase',
+          goal: 'fat loss',
+          preference: 'veg',
+          status: 'active',
+          targetCalories: 1850,
+          startDate: '2026-03-01',
+          endDate: '2026-05-24',
+          daysCount: 7,
+        },
         progressSummary: {
           totalCheckIns: 4,
           latestEnergyLevel: 8,
@@ -116,6 +135,9 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('heading', { name: 'Vaishnavi Upadhyay' })).toBeInTheDocument();
     expect(screen.getByText('82%')).toBeInTheDocument();
     expect(screen.getByText('1850')).toBeInTheDocument();
+    expect(screen.getByText('Selected Plans')).toBeInTheDocument();
+    expect(screen.getAllByText('Lean Split').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Cut Phase').length).toBeGreaterThan(0);
     expect(screen.getByText('AI Personalization Inputs')).toBeInTheDocument();
   });
 });

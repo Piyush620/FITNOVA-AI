@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
@@ -7,13 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, hasSession, hasHydrated, getCurrentUser, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (hasHydrated && hasSession && !isAuthenticated && !isLoading) {
-      void getCurrentUser();
-    }
-  }, [getCurrentUser, hasHydrated, hasSession, isAuthenticated, isLoading]);
+  const { isAuthenticated, hasSession, hasHydrated, isLoading } = useAuth();
 
   if (!hasHydrated || isLoading || (hasSession && !isAuthenticated)) {
     return (

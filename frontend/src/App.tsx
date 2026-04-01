@@ -160,8 +160,7 @@ function App() {
               color: '#f7f7f7',
               border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '18px',
-              boxShadow: '0 18px 40px rgba(0,0,0,0.28)',
-              backdropFilter: 'blur(16px)',
+              boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
             },
           }}
         />

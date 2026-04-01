@@ -228,34 +228,58 @@ export const CaloriesPage: React.FC = () => {
 
     void syncDietSlot(false);
 
-    const handleFocus = () => {
-      void syncDietSlot(true);
+    let syncDietSlotTimeout: number | null = null;
+    let refreshDataTimeout: number | null = null;
+    const scheduleDietSlotSync = (applyNextSlot: boolean) => {
+      if (syncDietSlotTimeout !== null) {
+        window.clearTimeout(syncDietSlotTimeout);
+      }
+
+      syncDietSlotTimeout = window.setTimeout(() => {
+        syncDietSlotTimeout = null;
+        void syncDietSlot(applyNextSlot);
+      }, 80);
+    };
+
+    const scheduleDataRefresh = () => {
+      if (refreshDataTimeout !== null) {
+        window.clearTimeout(refreshDataTimeout);
+      }
+
+      refreshDataTimeout = window.setTimeout(() => {
+        refreshDataTimeout = null;
+        void refreshData();
+      }, 80);
     };
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === 'fitnova-diet-sync') {
-        void syncDietSlot(true);
+        scheduleDietSlotSync(true);
       }
     };
     const handleDietSync = () => {
-      void syncDietSlot(true);
+      scheduleDietSlotSync(true);
     };
 
     const handleCalorieSync = () => {
-      void refreshData();
+      scheduleDataRefresh();
     };
     const handleWorkoutSync = () => {
-      void refreshData();
+      scheduleDataRefresh();
     };
 
-    window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorage);
     window.addEventListener('fitnova:diet-sync', handleDietSync);
     window.addEventListener('fitnova:calories-sync', handleCalorieSync);
     window.addEventListener('fitnova:workout-sync', handleWorkoutSync);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      if (syncDietSlotTimeout !== null) {
+        window.clearTimeout(syncDietSlotTimeout);
+      }
+      if (refreshDataTimeout !== null) {
+        window.clearTimeout(refreshDataTimeout);
+      }
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('fitnova:diet-sync', handleDietSync);
       window.removeEventListener('fitnova:calories-sync', handleCalorieSync);

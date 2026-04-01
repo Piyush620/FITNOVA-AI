@@ -264,8 +264,16 @@ export const DietPage: React.FC = () => {
       return;
     }
 
+    let refreshTimeout: number | null = null;
     const refresh = () => {
-      void loadPlans(false, 1);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = window.setTimeout(() => {
+        refreshTimeout = null;
+        void loadPlans(false, 1);
+      }, 80);
     };
 
     const handleStorage = (event: StorageEvent) => {
@@ -274,13 +282,14 @@ export const DietPage: React.FC = () => {
       }
     };
 
-    window.addEventListener('focus', refresh);
     window.addEventListener('fitnova:calories-sync', refresh);
     window.addEventListener('fitnova:diet-sync', refresh);
     window.addEventListener('storage', handleStorage);
 
     return () => {
-      window.removeEventListener('focus', refresh);
+      if (refreshTimeout !== null) {
+        window.clearTimeout(refreshTimeout);
+      }
       window.removeEventListener('fitnova:calories-sync', refresh);
       window.removeEventListener('fitnova:diet-sync', refresh);
       window.removeEventListener('storage', handleStorage);
