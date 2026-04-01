@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, LiveCalendar, Pagination, PremiumFeatureGate, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, FormattedAiText, LiveCalendar, Pagination, PremiumFeatureGate } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
@@ -57,6 +57,18 @@ const getWorkoutDurationSummary = (plan: WorkoutPlan) => {
   return `${Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)} min avg`;
 };
 
+const toIsoDate = (value?: string | Date | null) => {
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toISOString().slice(0, 10);
+};
+
+const isCompletedOnDate = (completedAt: string | Date | undefined, selectedDate: string) =>
+  toIsoDate(completedAt) === selectedDate;
+
 const defaultGeneratorState: GenerateWorkoutPlanPayload = {
   weight: '',
   goal: '',
@@ -64,6 +76,27 @@ const defaultGeneratorState: GenerateWorkoutPlanPayload = {
   trainingDaysPerWeek: 4,
   equipment: '',
 };
+
+const WorkoutGeneratorPanel = lazy(() =>
+  import('./sections/WorkoutGeneratorPanel').then((module) => ({ default: module.WorkoutGeneratorPanel })),
+);
+
+const GeneratorPanelFallback = () => (
+  <Card variant="gradient">
+    <div className="space-y-4">
+      <div className="h-8 w-56 animate-pulse rounded-2xl bg-[#1a2030]" />
+      <div className="grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="h-16 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+        ))}
+      </div>
+      <div className="flex gap-3">
+        <div className="h-11 w-44 animate-pulse rounded-xl bg-[#11131d]" />
+        <div className="h-11 w-32 animate-pulse rounded-xl bg-[#11131d]" />
+      </div>
+    </div>
+  </Card>
+);
 
 export const WorkoutsPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -225,7 +258,7 @@ export const WorkoutsPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await workoutsAPI.completeSession(planId, dayNumber);
+      const response = await workoutsAPI.completeSession(planId, dayNumber, selectedDate);
       const updatedPlan = response.data;
 
       setPlans((current) =>
@@ -371,7 +404,7 @@ export const WorkoutsPage: React.FC = () => {
   };
 
   const renderDayCard = (planId: string, day: WorkoutDay) => {
-    const isCompleted = !!day.completedAt;
+    const isCompleted = isCompletedOnDate(day.completedAt, selectedDate);
     const isCompleting = actionState?.type === 'complete' && actionState.key === `${planId}:${day.dayNumber}`;
     const exerciseCount = day.exercises.length;
 
@@ -432,7 +465,12 @@ export const WorkoutsPage: React.FC = () => {
                   <p className="text-sm text-gray-500">Rest {exercise.restSeconds}s</p>
                 ) : null}
               </div>
-              {exercise.notes ? <p className="mt-2 text-sm text-gray-400">{exercise.notes}</p> : null}
+              {exercise.notes ? (
+                <FormattedAiText
+                  text={exercise.notes}
+                  className="mt-2 text-sm leading-6 text-gray-400"
+                />
+              ) : null}
             </div>
           ))}
         </div>
@@ -549,95 +587,25 @@ export const WorkoutsPage: React.FC = () => {
         </Card>
 
         {showGenerator && hasPremiumAccess ? (
-          <Card variant="gradient" className="space-y-5">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-[#F7F7F7]">AI Workout Generator</h2>
-                <p className="mt-1 text-gray-400">
-                  Generate a structured workout plan and save it directly into your plans.
-                </p>
-              </div>
-              <span className="text-sm text-gray-500">Uses your backend AI provider</span>
-            </div>
-
-            {generatorError ? (
-              <div className="rounded-lg border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-[#FF6B00]">
-                {generatorError}
-              </div>
-            ) : null}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                label="Weight"
-                placeholder="70 kg"
-                value={generatorState.weight}
-                onChange={(e) => setGeneratorState((current) => ({ ...current, weight: e.target.value }))}
-              />
-              <Input
-                label="Goal"
-                placeholder="Fat loss, muscle gain, strength..."
-                value={generatorState.goal}
-                onChange={(e) => setGeneratorState((current) => ({ ...current, goal: e.target.value }))}
-              />
-              <Select
-                label="Experience"
-                placeholder="Select your level"
-                value={generatorState.experience}
-                onChange={(e) => setGeneratorState((current) => ({ ...current, experience: e.target.value }))}
-                options={[
-                  { value: 'beginner', label: 'Beginner' },
-                  { value: 'intermediate', label: 'Intermediate' },
-                  { value: 'advanced', label: 'Advanced' },
-                ]}
-              />
-              <Select
-                label="Training Days Per Week"
-                value={String(generatorState.trainingDaysPerWeek)}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    trainingDaysPerWeek: Number(e.target.value),
-                  }))
-                }
-                options={[
-                  { value: '3', label: '3 days' },
-                  { value: '4', label: '4 days' },
-                  { value: '5', label: '5 days' },
-                  { value: '6', label: '6 days' },
-                  { value: '7', label: '7 days' },
-                ]}
-              />
-              <Input
-                label="Equipment"
-                placeholder="Dumbbells, bench, resistance bands, bodyweight"
-                helperText="Use a comma-separated list or a short phrase."
-                value={generatorState.equipment}
-                onChange={(e) => setGeneratorState((current) => ({ ...current, equipment: e.target.value }))}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => void handleGeneratePlan()} isLoading={isGenerating}>
-                Generate And Save Plan
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setGeneratorState({
-                    weight: user?.profile?.weightKg?.toString() ?? user?.profile?.weight?.toString() ?? '',
-                    goal: user?.profile?.goal ?? '',
-                    experience: user?.profile?.activityLevel ?? user?.profile?.level ?? '',
-                    trainingDaysPerWeek: 4,
-                    equipment: '',
-                  });
-                  setGeneratorError('');
-                }}
-                disabled={isGenerating}
-              >
-                Reset Form
-              </Button>
-            </div>
-          </Card>
+          <Suspense fallback={<GeneratorPanelFallback />}>
+            <WorkoutGeneratorPanel
+              generatorError={generatorError}
+              generatorState={generatorState}
+              isGenerating={Boolean(isGenerating)}
+              onGenerate={() => void handleGeneratePlan()}
+              onReset={() => {
+                setGeneratorState({
+                  weight: user?.profile?.weightKg?.toString() ?? user?.profile?.weight?.toString() ?? '',
+                  goal: user?.profile?.goal ?? '',
+                  experience: user?.profile?.activityLevel ?? user?.profile?.level ?? '',
+                  trainingDaysPerWeek: 4,
+                  equipment: '',
+                });
+                setGeneratorError('');
+              }}
+              onStateChange={setGeneratorState}
+            />
+          </Suspense>
         ) : null}
 
         {showGenerator && !hasPremiumAccess ? (
@@ -879,17 +847,18 @@ export const WorkoutsPage: React.FC = () => {
                         </p>
                       </div>
                       {selectedDay ? (
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${selectedDay.completedAt ? 'bg-[#1f3a2c] text-[#7fffc1]' : 'bg-[#2d2f3a] text-[#c3c7d1]'}`}>
-                          {selectedDay.completedAt ? 'Done' : 'Pending'}
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase ${isCompletedOnDate(selectedDay.completedAt, selectedDate) ? 'bg-[#1f3a2c] text-[#7fffc1]' : 'bg-[#2d2f3a] text-[#c3c7d1]'}`}>
+                          {isCompletedOnDate(selectedDay.completedAt, selectedDate) ? 'Done' : 'Pending'}
                         </span>
                       ) : null}
                     </div>
                   </div>
 
                   {selectedPlan.notes ? (
-                    <div className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4 text-gray-300">
-                      {selectedPlan.notes}
-                    </div>
+                    <FormattedAiText
+                      text={selectedPlan.notes}
+                      className="rounded-lg border border-[#2e303a] bg-[#11131d] p-4 text-gray-300"
+                    />
                   ) : null}
 
                   {selectedPlan.status === 'completed' ? (

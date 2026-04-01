@@ -5,6 +5,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
+import { CalorieLog, CalorieLogDocument } from 'src/modules/calorie-logs/schemas/calorie-log.schema';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 
 import {
@@ -19,6 +20,8 @@ export class WorkoutsService {
   constructor(
     @InjectModel(WorkoutPlan.name)
     private readonly workoutPlanModel: Model<WorkoutPlanDocument>,
+    @InjectModel(CalorieLog.name)
+    private readonly calorieLogModel: Model<CalorieLogDocument>,
   ) {}
 
   async createPlan(userId: string, payload: CreateWorkoutPlanDto) {
@@ -166,7 +169,12 @@ export class WorkoutsService {
     };
   }
 
-  async completeSession(userId: string, planId: string, dayNumber: number) {
+  async completeSession(
+    userId: string,
+    planId: string,
+    dayNumber: number,
+    completedDate?: string,
+  ) {
     const plan = await this.findOwnedPlan(userId, planId);
     const workoutDay = plan.days.find((day) => day.dayNumber === dayNumber);
 
@@ -174,7 +182,8 @@ export class WorkoutsService {
       throw new NotFoundException(`Workout day ${dayNumber} was not found in this plan.`);
     }
 
-    workoutDay.completedAt = new Date();
+    workoutDay.completedAt = this.resolveCompletedAt(completedDate);
+    await this.syncCompletedWorkoutToCalories(userId, plan, workoutDay, workoutDay.completedAt);
     if (plan.days.every((day) => !!day.completedAt)) {
       plan.status = WorkoutPlanStatus.COMPLETED;
     }
@@ -205,6 +214,47 @@ export class WorkoutsService {
       },
       { status: WorkoutPlanStatus.ARCHIVED },
     );
+  }
+
+  private async syncCompletedWorkoutToCalories(
+    userId: string,
+    plan: WorkoutPlanDocument,
+    workoutDay: WorkoutPlanDocument['days'][number],
+    completedAt: Date,
+  ) {
+    const loggedDate = completedAt.toISOString().slice(0, 10);
+    const filter = {
+      userId: new Types.ObjectId(userId),
+      loggedDate,
+      mealType: 'other' as const,
+      source: 'workout-plan' as const,
+      title: `Workout completed: ${workoutDay.focus}`,
+    };
+
+    const existingLog = await this.calorieLogModel.findOne(filter);
+
+    if (existingLog) {
+      existingLog.calories = 0;
+      existingLog.notes = `${plan.title} | ${workoutDay.dayLabel}${workoutDay.durationMinutes ? ` | ${workoutDay.durationMinutes} min` : ''}`;
+      existingLog.rawInput = workoutDay.exercises.map((exercise) => exercise.name).join(', ');
+      await existingLog.save();
+      return;
+    }
+
+    await this.calorieLogModel.create({
+      ...filter,
+      calories: 0,
+      notes: `${plan.title} | ${workoutDay.dayLabel}${workoutDay.durationMinutes ? ` | ${workoutDay.durationMinutes} min` : ''}`,
+      rawInput: workoutDay.exercises.map((exercise) => exercise.name).join(', '),
+    });
+  }
+
+  private resolveCompletedAt(completedDate?: string) {
+    if (completedDate) {
+      return new Date(`${completedDate}T12:00:00.000Z`);
+    }
+
+    return new Date();
   }
 
   private serializePlan(plan: WorkoutPlanDocument) {

@@ -166,7 +166,13 @@ export class DietService {
     };
   }
 
-  async completeMeal(userId: string, planId: string, dayNumber: number, mealType: string) {
+  async completeMeal(
+    userId: string,
+    planId: string,
+    dayNumber: number,
+    mealType: string,
+    completedDate?: string,
+  ) {
     const plan = await this.findOwnedPlan(userId, planId);
     const dietDay = plan.days.find((day) => day.dayNumber === dayNumber);
 
@@ -179,7 +185,7 @@ export class DietService {
       throw new NotFoundException(`Meal "${mealType}" was not found on day ${dayNumber}.`);
     }
 
-    meal.completedAt = new Date();
+    meal.completedAt = this.resolveCompletedAt(completedDate);
     await this.syncCompletedMealToCalories(userId, meal, meal.completedAt);
 
     if (plan.days.every((day) => day.meals.every((entry) => !!entry.completedAt))) {
@@ -227,6 +233,14 @@ export class DietService {
       notes: meal.description,
       rawInput: meal.items?.join(', '),
     });
+  }
+
+  private resolveCompletedAt(completedDate?: string) {
+    if (completedDate) {
+      return new Date(`${completedDate}T12:00:00.000Z`);
+    }
+
+    return new Date();
   }
 
   private async findOwnedPlan(userId: string, planId: string) {

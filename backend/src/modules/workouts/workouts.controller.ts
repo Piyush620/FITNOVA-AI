@@ -6,6 +6,7 @@ import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 
 import { CreateWorkoutPlanDto } from './dto/create-workout-plan.dto';
+import { CompleteWorkoutSessionDto } from './dto/complete-workout-session.dto';
 import { WorkoutsService } from './workouts.service';
 
 @ApiTags('Workouts')
@@ -80,7 +81,8 @@ export class WorkoutsController {
     @CurrentUser() user: JwtPayload,
     @Param('planId') planId: string,
     @Param('dayNumber', ParseIntPipe) dayNumber: number,
+    @Body() payload: CompleteWorkoutSessionDto,
   ) {
-    return this.workoutsService.completeSession(user.sub, planId, dayNumber);
+    return this.workoutsService.completeSession(user.sub, planId, dayNumber, payload.completedDate);
   }
 }

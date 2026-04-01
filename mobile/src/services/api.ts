@@ -178,8 +178,8 @@ export const workoutsAPI = {
   activatePlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/activate`, {}),
   restartPlan: (planId: string) => apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/restart`, {}),
   deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/workouts/plans/${planId}`),
-  completeSession: (planId: string, dayNumber: number) =>
-    apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/sessions/${dayNumber}/complete`, {}),
+  completeSession: (planId: string, dayNumber: number, completedDate?: string) =>
+    apiClient.post<WorkoutPlan>(`/workouts/plans/${planId}/sessions/${dayNumber}/complete`, { completedDate }),
 };
 
 export const dietAPI = {
@@ -189,8 +189,8 @@ export const dietAPI = {
   activatePlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/activate`, {}),
   restartPlan: (planId: string) => apiClient.post<DietPlan>(`/diet/plans/${planId}/restart`, {}),
   deletePlan: (planId: string) => apiClient.delete<{ deleted: boolean; id: string }>(`/diet/plans/${planId}`),
-  completeMeal: (planId: string, dayNumber: number, mealType: string) =>
-    apiClient.post<DietPlan>(`/diet/plans/${planId}/days/${dayNumber}/meals/${mealType}/complete`, {}),
+  completeMeal: (planId: string, dayNumber: number, mealType: string, completedDate?: string) =>
+    apiClient.post<DietPlan>(`/diet/plans/${planId}/days/${dayNumber}/meals/${mealType}/complete`, { completedDate }),
 };
 
 export const caloriesAPI = {
@@ -202,7 +202,7 @@ export const caloriesAPI = {
     loggedDate: string;
     mealType: CalorieLog['mealType'];
     title: string;
-    source?: 'manual' | 'ai';
+    source?: 'manual' | 'ai' | 'diet-plan' | 'workout-plan';
     calories: number;
     proteinGrams?: number | null;
     carbsGrams?: number | null;

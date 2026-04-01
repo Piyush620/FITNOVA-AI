@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, Input, LiveCalendar, Pagination, PremiumFeatureGate, Select } from '../components/Common';
+import { Breadcrumbs, Card, Button, FormattedAiText, LiveCalendar, Pagination, PremiumFeatureGate } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, dietAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
@@ -45,6 +45,18 @@ const formatPreferenceLabel = (preference: DietPlan['preference']) => {
       return 'Veg';
   }
 };
+
+const toIsoDate = (value?: string | Date | null) => {
+  if (!value) return null;
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toISOString().slice(0, 10);
+};
+
+const isCompletedOnDate = (completedAt: string | Date | undefined, selectedDate: string) =>
+  toIsoDate(completedAt) === selectedDate;
 
 const calculateMealNutrition = (meal: Meal) => ({
   calories: meal.calories ?? 0,
@@ -123,6 +135,28 @@ const defaultGeneratorState: GenerateDietPlanPayload = {
   cuisineRegion: 'mixed-indian',
   budget: 'medium',
 };
+
+const DietGeneratorPanel = lazy(() =>
+  import('./sections/DietGeneratorPanel').then((module) => ({ default: module.DietGeneratorPanel })),
+);
+
+const GeneratorPanelFallback = () => (
+  <Card variant="gradient">
+    <div className="space-y-4">
+      <div className="h-8 w-56 animate-pulse rounded-2xl bg-[#1a2030]" />
+      <div className="grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-28 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+        ))}
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-16 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+        ))}
+      </div>
+    </div>
+  </Card>
+);
 
 export const DietPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -333,7 +367,7 @@ export const DietPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await dietAPI.completeMeal(planId, dayNumber, mealType);
+      const response = await dietAPI.completeMeal(planId, dayNumber, mealType, selectedDate);
       const updatedPlan = response.data;
 
       setPlans((current) => current.map((plan) => (plan.id === updatedPlan.id ? updatedPlan : plan)));
@@ -482,7 +516,7 @@ export const DietPage: React.FC = () => {
   };
 
   const renderMealCard = (planId: string, dayNumber: number, meal: Meal) => {
-    const isCompleted = !!meal.completedAt;
+    const isCompleted = isCompletedOnDate(meal.completedAt, selectedDate);
     const isCompleting =
       actionState?.type === 'complete' && actionState.key === `${planId}:${dayNumber}:${meal.type}`;
     const mealNutrition = calculateMealNutrition(meal);
@@ -502,7 +536,12 @@ export const DietPage: React.FC = () => {
               ) : null}
             </div>
             <h4 className="mt-2 text-lg font-bold text-[#F7F7F7]">{meal.title}</h4>
-            {meal.description ? <p className="mt-1 text-sm text-gray-400">{meal.description}</p> : null}
+            {meal.description ? (
+              <FormattedAiText
+                text={meal.description}
+                className="mt-1 text-sm leading-6 text-gray-400"
+              />
+            ) : null}
           </div>
           {!isCompleted && selectedPlan?.status === 'active' ? (
             <Button
@@ -559,7 +598,7 @@ export const DietPage: React.FC = () => {
 
   const renderDayCard = (planId: string, day: DietDay) => {
     const dayNutrition = calculateDayNutrition(day);
-    const completedMeals = day.meals.filter((meal) => !!meal.completedAt).length;
+    const completedMeals = day.meals.filter((meal) => isCompletedOnDate(meal.completedAt, selectedDate)).length;
     const totalMeals = day.meals.length;
     const completionRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 100) : 0;
     const calorieTarget = day.targetCalories ?? selectedPlan?.targetCalories ?? null;
@@ -765,186 +804,31 @@ export const DietPage: React.FC = () => {
         </Card>
 
         {showGenerator && hasPremiumAccess ? (
-          <Card variant="gradient" className="space-y-5">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-[#F7F7F7]">AI Diet Generator</h2>
-                <p className="mt-1 text-gray-400">
-                  Tell FitNova your current weight, goal weight, timeline, cuisine, and food preference. The AI will estimate calories and build the week for you.
-                </p>
-              </div>
-              <span className="text-sm text-gray-500">Uses your backend AI provider</span>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="theme-subtle-panel rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Current tracker target</p>
-                <p className="mt-2 text-2xl font-bold text-[#00FF88]">{currentTrackerCalories} kcal</p>
-                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
-                  {activePlan ? 'This is coming from your active diet plan.' : 'This is your current goal-based estimate.'}
-                </p>
-              </div>
-              <div className="theme-subtle-panel rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Goal-based estimate</p>
-                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">{estimatedTrackerCalories} kcal</p>
-                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
-                  FitNova uses your profile goal, activity, and body stats before any diet plan exists.
-                </p>
-              </div>
-              <div className="theme-subtle-panel rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">After plan is active</p>
-                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">Tracker updates</p>
-                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
-                  As soon as a diet plan is saved and active, the calorie tracker switches to that plan target automatically.
-                </p>
-              </div>
-              <div className="theme-subtle-panel rounded-2xl border p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">Workout sync</p>
-                <p className="mt-2 text-2xl font-bold text-[#F7F7F7]">
-                  {activeWorkoutPlan ? `${activeWorkoutPlan.days.length} day split` : 'No active split'}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[#aeb7cb]">
-                  {activeWorkoutPlan
-                    ? 'Diet generation follows your active workout split, giving training days more fuel and recovery support.'
-                    : 'Activate a workout split first if you want meal timing and day calories shaped around training demand.'}
-                </p>
-              </div>
-            </div>
-
-            {activeWorkoutPlan ? (
-              <div className="theme-subtle-panel rounded-2xl border border-[#00FF88]/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#00FF88]">Active workout split</p>
-                <p className="mt-2 text-sm leading-6 text-[#d5d9e3]">
-                  {activeWorkoutPlan.title}: {activeWorkoutPlan.days.map((day) => `${day.dayLabel} ${day.focus}`).join(', ')}.
-                </p>
-              </div>
-            ) : null}
-
-            {generatorError ? (
-              <div className="rounded-lg border border-[#FF6B00] bg-[#FF6B00]/10 p-4 text-[#FF6B00]">
-                {generatorError}
-              </div>
-            ) : null}
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                label="Goal"
-                placeholder="Fat loss, maintenance, lean bulk..."
-                value={generatorState.goal}
-                onChange={(e) => setGeneratorState((current) => ({ ...current, goal: e.target.value }))}
-              />
-              <Input
-                label="Current Weight (kg)"
-                type="number"
-                min={30}
-                max={300}
-                value={generatorState.currentWeightKg}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    currentWeightKg: Number(e.target.value) || 0,
-                  }))
-                }
-              />
-              <Input
-                label="Target Weight (kg)"
-                type="number"
-                min={30}
-                max={300}
-                value={generatorState.targetWeightKg}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    targetWeightKg: Number(e.target.value) || 0,
-                  }))
-                }
-              />
-              <Input
-                label="Time To Reach Goal (weeks)"
-                type="number"
-                min={1}
-                max={52}
-                value={generatorState.timelineWeeks}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    timelineWeeks: Number(e.target.value) || 0,
-                  }))
-                }
-              />
-              <Select
-                label="Food Preference"
-                value={generatorState.preference}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    preference: e.target.value as GenerateDietPlanPayload['preference'],
-                  }))
-                }
-                options={[
-                  { value: 'veg', label: 'Veg' },
-                  { value: 'non-veg', label: 'Non-veg' },
-                  { value: 'eggetarian', label: 'Eggetarian' },
-                ]}
-              />
-              <Select
-                label="Cuisine Style"
-                value={generatorState.cuisineRegion}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    cuisineRegion: e.target.value as GenerateDietPlanPayload['cuisineRegion'],
-                  }))
-                }
-                options={[
-                  { value: 'north-indian', label: 'North Indian' },
-                  { value: 'south-indian', label: 'South Indian' },
-                  { value: 'east-indian', label: 'East Indian' },
-                  { value: 'west-indian', label: 'West Indian' },
-                  { value: 'mixed-indian', label: 'Mixed Indian' },
-                ]}
-              />
-              <Select
-                label="Budget"
-                value={generatorState.budget}
-                onChange={(e) =>
-                  setGeneratorState((current) => ({
-                    ...current,
-                    budget: e.target.value as GenerateDietPlanPayload['budget'],
-                  }))
-                }
-                options={[
-                  { value: 'low', label: 'Low' },
-                  { value: 'medium', label: 'Medium' },
-                  { value: 'high', label: 'High' },
-                ]}
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => void handleGeneratePlan()} isLoading={isGenerating}>
-                Generate And Save Plan
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setGeneratorState({
-                    goal: user?.profile?.goal ?? '',
-                    currentWeightKg: user?.profile?.weightKg ?? 70,
-                    targetWeightKg: Math.max((user?.profile?.weightKg ?? 70) - 5, 30),
-                    timelineWeeks: 12,
-                    preference: 'veg',
-                    cuisineRegion: 'mixed-indian',
-                    budget: 'medium',
-                  });
-                  setGeneratorError('');
-                }}
-                disabled={isGenerating}
-              >
-                Reset Form
-              </Button>
-            </div>
-          </Card>
+          <Suspense fallback={<GeneratorPanelFallback />}>
+            <DietGeneratorPanel
+              activePlanTitle={activePlan?.title ?? null}
+              activeWorkoutPlan={activeWorkoutPlan}
+              currentTrackerCalories={currentTrackerCalories}
+              estimatedTrackerCalories={estimatedTrackerCalories}
+              generatorError={generatorError}
+              generatorState={generatorState}
+              isGenerating={Boolean(isGenerating)}
+              onGenerate={() => void handleGeneratePlan()}
+              onReset={() => {
+                setGeneratorState({
+                  goal: user?.profile?.goal ?? '',
+                  currentWeightKg: user?.profile?.weightKg ?? 70,
+                  targetWeightKg: Math.max((user?.profile?.weightKg ?? 70) - 5, 30),
+                  timelineWeeks: 12,
+                  preference: 'veg',
+                  cuisineRegion: 'mixed-indian',
+                  budget: 'medium',
+                });
+                setGeneratorError('');
+              }}
+              onStateChange={setGeneratorState}
+            />
+          </Suspense>
         ) : null}
 
         {showGenerator && !hasPremiumAccess ? (
@@ -1172,7 +1056,7 @@ export const DietPage: React.FC = () => {
                           <div className="flex items-center justify-between text-sm text-gray-400">
                             <span>Meals completed</span>
                             <span className="font-semibold text-[#F7F7F7]">
-                              {selectedDay.meals.filter((meal) => !!meal.completedAt).length}/{selectedDay.meals.length}
+                              {selectedDay.meals.filter((meal) => isCompletedOnDate(meal.completedAt, selectedDate)).length}/{selectedDay.meals.length}
                             </span>
                           </div>
                         </div>
@@ -1181,9 +1065,10 @@ export const DietPage: React.FC = () => {
                   </div>
 
                   {selectedPlan.notes ? (
-                    <div className="theme-subtle-panel rounded-lg border p-4 text-gray-300">
-                      {selectedPlan.notes}
-                    </div>
+                    <FormattedAiText
+                      text={selectedPlan.notes}
+                      className="theme-subtle-panel rounded-lg border p-4 text-gray-300"
+                    />
                   ) : null}
 
                   {selectedPlan.status === 'completed' ? (

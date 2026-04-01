@@ -201,7 +201,7 @@ export interface CalorieLog {
     | 'post-workout'
     | 'other';
   title: string;
-  source?: 'manual' | 'ai' | 'diet-plan';
+  source?: 'manual' | 'ai' | 'diet-plan' | 'workout-plan';
   rawInput?: string;
   calories: number;
   proteinGrams?: number;

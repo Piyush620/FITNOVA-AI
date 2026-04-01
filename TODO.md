@@ -74,6 +74,31 @@
 - [x] Web diet and workouts now show one selected day at a time instead of the whole plan at once
 - [x] Web plans restore fresh when previously completed plans are activated again
 - [x] Web calories, diet, and workouts now refresh synced state from shared calendar and cross-feature events
+- [x] Workout and diet completion on web/mobile now use the selected live-calendar date instead of always using today
+- [x] Workout completion now syncs into calorie logs with date-aware backend coverage
+- [x] AI-generated notes and coach replies on the web render formatted text instead of raw markdown markers like `**`
+- [x] Web diet/workout completion state now reflects the selected calendar date instead of showing stale completed status
+- [x] Frontend lazy loading is now strengthened with route preloading and split heavy planner/calorie sections for faster page rendering
+
+## Recently Fixed (April 1, 2026)
+
+### Date-Aware Completion & Sync
+- Added optional `completedDate` request payloads for workout session and diet meal completion
+- Updated web and mobile completion flows to send the currently selected shared-calendar date
+- Added workout completion sync into calorie logs with focused backend service coverage
+- Added backend HTTP coverage for the updated completion contract and selected-date behavior
+
+### Web Rendering & UX
+- Fixed AI-generated notes on Diet and Workouts plus Coach Chat replies to render formatted text instead of showing raw `**bold**` markers
+- Fixed web Diet and Workouts so completion badges and progress reflect the selected calendar day rather than any historical completion date
+- Updated calorie-to-diet sync so diet meal completion dates track the actual logged calendar day instead of preserving stale dates
+
+### Frontend Performance
+- Added route preloading after auth/session restore and on header-nav hover/focus
+- Split the heavy AI workout generator into a lazy-loaded section
+- Split the heavy AI diet generator into a lazy-loaded section
+- Split the Calories composer and monthly review into lazy-loaded sections
+- Reduced the main web route cost for Diet, Workouts, and Calories so pages become interactive faster
 
 ## Recently Fixed (March 31, 2026)
 

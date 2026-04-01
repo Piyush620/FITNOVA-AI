@@ -6,6 +6,7 @@ import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 
 import { CreateDietPlanDto } from './dto/create-diet-plan.dto';
+import { CompleteDietMealDto } from './dto/complete-diet-meal.dto';
 import { DietService } from './diet.service';
 
 @ApiTags('Diet')
@@ -81,7 +82,8 @@ export class DietController {
     @Param('planId') planId: string,
     @Param('dayNumber') dayNumber: string,
     @Param('mealType') mealType: string,
+    @Body() payload: CompleteDietMealDto,
   ) {
-    return this.dietService.completeMeal(user.sub, planId, Number(dayNumber), mealType);
+    return this.dietService.completeMeal(user.sub, planId, Number(dayNumber), mealType, payload.completedDate);
   }
 }

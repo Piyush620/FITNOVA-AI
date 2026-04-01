@@ -159,7 +159,7 @@ export default function DietScreen() {
     setActionKey(`complete:${planId}:${dayNumber}:${mealType}`);
 
     try {
-      const response = await dietAPI.completeMeal(planId, dayNumber, mealType);
+      const response = await dietAPI.completeMeal(planId, dayNumber, mealType, selectedDate);
       setActivePlan(response.data.status === 'active' || response.data.status === 'completed' ? response.data : null);
       await loadPlans();
       showToast({ title: 'Meal completed', message: `${formatMealType(mealType)} has been logged.`, tone: 'success' });

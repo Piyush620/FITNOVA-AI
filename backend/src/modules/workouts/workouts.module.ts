@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { CalorieLog, CalorieLogSchema } from '../calorie-logs/schemas/calorie-log.schema';
 import { WorkoutPlan, WorkoutPlanSchema } from './schemas/workout-plan.schema';
 import { WorkoutsController } from './workouts.controller';
 import { WorkoutsService } from './workouts.service';
@@ -9,6 +10,7 @@ import { WorkoutsService } from './workouts.service';
   imports: [
     MongooseModule.forFeature([
       { name: WorkoutPlan.name, schema: WorkoutPlanSchema },
+      { name: CalorieLog.name, schema: CalorieLogSchema },
     ]),
   ],
   controllers: [WorkoutsController],

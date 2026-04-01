@@ -171,10 +171,18 @@ describe('Core product HTTP flows', () => {
       method: 'POST',
       url: '/workouts/plans/plan-1/sessions/2/complete',
       headers: authHeaders('free-token'),
+      payload: {
+        completedDate: '2026-03-31',
+      },
     });
 
     expect(completeResponse.statusCode).toBe(201);
-    expect(workoutsService.completeSession).toHaveBeenCalledWith('user-free', 'plan-1', 2);
+    expect(workoutsService.completeSession).toHaveBeenCalledWith(
+      'user-free',
+      'plan-1',
+      2,
+      '2026-03-31',
+    );
 
     await app.close();
   });
@@ -224,10 +232,19 @@ describe('Core product HTTP flows', () => {
       method: 'POST',
       url: '/diet/plans/diet-1/days/3/meals/lunch/complete',
       headers: authHeaders('free-token'),
+      payload: {
+        completedDate: '2026-03-31',
+      },
     });
 
     expect(completeResponse.statusCode).toBe(201);
-    expect(dietService.completeMeal).toHaveBeenCalledWith('user-free', 'diet-1', 3, 'lunch');
+    expect(dietService.completeMeal).toHaveBeenCalledWith(
+      'user-free',
+      'diet-1',
+      3,
+      'lunch',
+      '2026-03-31',
+    );
 
     await app.close();
   });

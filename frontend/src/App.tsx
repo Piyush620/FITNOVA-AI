@@ -7,21 +7,80 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Components
 import { ProtectedRoute } from './components/ProtectedRoute';
 
-const LandingPage = lazy(() => import('./pages/Landing').then((module) => ({ default: module.LandingPage })));
-const LoginPage = lazy(() => import('./pages/Login').then((module) => ({ default: module.LoginPage })));
-const SignupPage = lazy(() => import('./pages/Signup').then((module) => ({ default: module.SignupPage })));
-const VerifyOtpPage = lazy(() => import('./pages/VerifyOtp').then((module) => ({ default: module.VerifyOtpPage })));
-const DashboardPage = lazy(() =>
+type PreloadableComponent = React.LazyExoticComponent<React.ComponentType> & {
+  preload: () => Promise<unknown>;
+};
+
+const lazyWithPreload = (
+  factory: () => Promise<{ default: React.ComponentType }>,
+): PreloadableComponent => {
+  const Component = lazy(factory) as PreloadableComponent;
+  Component.preload = factory;
+  return Component;
+};
+
+const LandingPage = lazyWithPreload(() =>
+  import('./pages/Landing').then((module) => ({ default: module.LandingPage })),
+);
+const LoginPage = lazyWithPreload(() =>
+  import('./pages/Login').then((module) => ({ default: module.LoginPage })),
+);
+const SignupPage = lazyWithPreload(() =>
+  import('./pages/Signup').then((module) => ({ default: module.SignupPage })),
+);
+const VerifyOtpPage = lazyWithPreload(() =>
+  import('./pages/VerifyOtp').then((module) => ({ default: module.VerifyOtpPage })),
+);
+const DashboardPage = lazyWithPreload(() =>
   import('./pages/Dashboard').then((module) => ({ default: module.DashboardPage })),
 );
-const WorkoutsPage = lazy(() => import('./pages/Workouts').then((module) => ({ default: module.WorkoutsPage })));
-const DietPage = lazy(() => import('./pages/Diet').then((module) => ({ default: module.DietPage })));
-const CoachChatPage = lazy(() =>
+const WorkoutsPage = lazyWithPreload(() =>
+  import('./pages/Workouts').then((module) => ({ default: module.WorkoutsPage })),
+);
+const DietPage = lazyWithPreload(() =>
+  import('./pages/Diet').then((module) => ({ default: module.DietPage })),
+);
+const CoachChatPage = lazyWithPreload(() =>
   import('./pages/CoachChat').then((module) => ({ default: module.CoachChatPage })),
 );
-const CaloriesPage = lazy(() => import('./pages/Calories').then((module) => ({ default: module.CaloriesPage })));
-const ProfilePage = lazy(() => import('./pages/Profile').then((module) => ({ default: module.ProfilePage })));
-const BillingPage = lazy(() => import('./pages/Billing').then((module) => ({ default: module.BillingPage })));
+const CaloriesPage = lazyWithPreload(() =>
+  import('./pages/Calories').then((module) => ({ default: module.CaloriesPage })),
+);
+const ProfilePage = lazyWithPreload(() =>
+  import('./pages/Profile').then((module) => ({ default: module.ProfilePage })),
+);
+const BillingPage = lazyWithPreload(() =>
+  import('./pages/Billing').then((module) => ({ default: module.BillingPage })),
+);
+
+export const preloadRoute = (path: string) => {
+  switch (path) {
+    case '/':
+      return LandingPage.preload();
+    case '/login':
+      return LoginPage.preload();
+    case '/signup':
+      return SignupPage.preload();
+    case '/verify-otp':
+      return VerifyOtpPage.preload();
+    case '/dashboard':
+      return DashboardPage.preload();
+    case '/workouts':
+      return WorkoutsPage.preload();
+    case '/diet':
+      return DietPage.preload();
+    case '/calories':
+      return CaloriesPage.preload();
+    case '/coach':
+      return CoachChatPage.preload();
+    case '/profile':
+      return ProfilePage.preload();
+    case '/billing':
+      return BillingPage.preload();
+    default:
+      return Promise.resolve();
+  }
+};
 
 function ScrollToTop() {
   const location = useLocation();
@@ -58,6 +117,32 @@ function App() {
       void getCurrentUser();
     }
   }, [getCurrentUser, hasHydrated, hasSession, isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
+    const runPreload = () => {
+      if (isAuthenticated || hasSession) {
+        void DashboardPage.preload();
+        void WorkoutsPage.preload();
+        void DietPage.preload();
+        void CaloriesPage.preload();
+      } else {
+        void LoginPage.preload();
+        void SignupPage.preload();
+      }
+    };
+
+    if ('requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(runPreload, { timeout: 1200 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = setTimeout(runPreload, 350);
+    return () => clearTimeout(timeoutId);
+  }, [hasHydrated, hasSession, isAuthenticated]);
 
   return (
     <ErrorBoundary>

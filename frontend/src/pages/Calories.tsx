@@ -1,15 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Button, Card, Input, LiveCalendar, PremiumFeatureGate, Select, Textarea } from '../components/Common';
+import { Breadcrumbs, Button, Card, Input, LiveCalendar } from '../components/Common';
 import { useAuth } from '../hooks/useAuth';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { aiAPI, caloriesAPI, dietAPI, getApiErrorMessage } from '../services/api';
 import type { CalorieEstimate, CalorieLog, DailyCalorieLogResponse, DietPlan, Meal, MonthlyCalorieSummary } from '../types';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 import { notifyCaloriesChanged } from '../utils/appSync';
-import { formatDateLabel, formatMonthLabel } from '../utils/calendar';
+import { formatDateLabel } from '../utils/calendar';
 import { toastError, toastSuccess } from '../utils/toast';
 
 type ApiErrorResponse = { message?: string | string[] };
@@ -23,6 +23,24 @@ type NextDietSlot = {
   dayTargetCalories?: number;
   meal: Meal;
 };
+
+const CaloriesComposerPanel = lazy(() =>
+  import('./sections/CaloriesComposerPanel').then((module) => ({ default: module.CaloriesComposerPanel })),
+);
+const CaloriesMonthlyReview = lazy(() =>
+  import('./sections/CaloriesMonthlyReview').then((module) => ({ default: module.CaloriesMonthlyReview })),
+);
+
+const SectionFallback = () => (
+  <Card variant="glass" className="space-y-4 rounded-[1.6rem] p-4 sm:p-5">
+    <div className="h-8 w-40 animate-pulse rounded-2xl bg-[#1a2030]" />
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="h-16 animate-pulse rounded-2xl border border-[#2e303a] bg-[#11131d]" />
+      ))}
+    </div>
+  </Card>
+);
 
 const emptyManual = (loggedDate: string): ManualForm => ({ loggedDate, mealType: 'breakfast', title: '', calories: '', proteinGrams: '', carbsGrams: '', fatsGrams: '', notes: '' });
 const mealTypeOptions = [{ value: 'breakfast', label: 'Breakfast' }, { value: 'mid-morning', label: 'Mid-Morning' }, { value: 'lunch', label: 'Lunch' }, { value: 'evening-snack', label: 'Evening Snack' }, { value: 'dinner', label: 'Dinner' }, { value: 'post-workout', label: 'Post-Workout' }, { value: 'other', label: 'Other' }];
@@ -682,35 +700,41 @@ export const CaloriesPage: React.FC = () => {
         </div>
 
         <div className="grid gap-5 xl:grid-cols-[400px_minmax(0,1fr)]">
-          <Card variant="glass" className="space-y-5 rounded-[1.6rem] p-4 sm:p-5 xl:sticky xl:top-24">
-            <div className="flex gap-2 rounded-2xl border border-white/10 bg-[#0f1320] p-1">
-              <button type="button" onClick={() => hasPremiumAccess ? setMode('ai') : navigate('/billing')} className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${mode === 'ai' ? 'bg-white text-black' : 'text-[#c6cede]'}`}>{hasPremiumAccess ? 'AI Estimate' : 'AI Estimate (Premium)'}</button>
-              <button type="button" onClick={() => setMode('manual')} className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold ${mode === 'manual' ? 'bg-white text-black' : 'text-[#c6cede]'}`}>Manual</button>
-            </div>
-
-            {mode === 'ai' ? (
-              hasPremiumAccess ? (
-              <div className="space-y-5">
-                <div className="space-y-2"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">AI logging</p><h2 className="text-xl font-bold text-[#F7F7F7] sm:text-2xl">What did you eat?</h2></div>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1"><Input label="Date" type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} /><Select label="Meal type" value={aiMealType} onChange={(e) => setAiMealType(e.target.value as CalorieLog['mealType'])} options={mealTypeOptions} /></div>
-                <Textarea label="Meal description" rows={5} value={aiMealText} onChange={(e) => setAiMealText(e.target.value)} placeholder="Example: 2 rotis, paneer sabzi, dal, little rice and curd" />
-                <div className="flex flex-wrap gap-3"><Button variant="accent" onClick={() => void handleEstimate()} isLoading={actionState === 'estimate'}>Estimate With AI</Button>{estimate ? <Button variant="secondary" onClick={resetComposer}>Reset</Button> : null}</div>
-                {estimate ? <div className="space-y-4 rounded-2xl border border-[#2e303a] bg-[#0f1320] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Estimate preview</p><h3 className="mt-2 text-lg font-semibold text-[#F7F7F7]">{estimate.title}</h3><p className="mt-2 text-sm leading-6 text-[#98a3b8]">{estimate.rawInput}</p></div><div className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{Math.round(estimate.confidence * 100)}% confidence</div></div><div className="grid grid-cols-2 gap-3">{[['Calories', `${estimate.calories}`], ['Protein', `${estimate.proteinGrams}g`], ['Carbs', `${estimate.carbsGrams}g`], ['Fats', `${estimate.fatsGrams}g`]].map(([label, value]) => <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{label}</p><p className="mt-2 text-xl font-bold text-[#F7F7F7]">{value}</p></div>)}</div><div className="space-y-2">{estimate.parsedItems.map((item) => <div key={`${item.name}-${item.quantity ?? ''}`} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-black/20 px-3 py-2"><div><p className="text-sm font-medium text-[#F7F7F7]">{item.name}</p>{item.quantity ? <p className="text-xs text-[#8f97ab]">{item.quantity}</p> : null}</div><p className="text-sm text-[#cfd6e3]">{item.estimatedCalories ?? 0} kcal</p></div>)}</div><div className="flex flex-wrap gap-3 border-t border-white/10 pt-4"><Button variant="accent" onClick={() => void handleSaveEstimate()} isLoading={actionState === 'save-estimate'}>Save Estimated Entry</Button><Button variant="secondary" onClick={() => { setMode('manual'); setManualForm({ loggedDate: estimate.loggedDate, mealType: estimate.mealType, title: estimate.title, calories: String(estimate.calories), proteinGrams: String(estimate.proteinGrams), carbsGrams: String(estimate.carbsGrams), fatsGrams: String(estimate.fatsGrams), notes: estimate.notes ?? '' }); }}>Edit Manually</Button></div></div> : null}
-              </div>
-              ) : (
-                <PremiumFeatureGate eyebrow="Premium nutrition AI" title="AI calorie estimation is available on the premium plan." description="Upgrade to describe meals in plain language, review AI macro estimates, and generate deeper monthly nutrition reviews." ctaLabel="Unlock AI Logging" />
-              )
-            ) : (
-              <div className="space-y-5">
-                <div className="space-y-2"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">{editingLogId ? 'Edit entry' : 'Manual logging'}</p><h2 className="text-xl font-bold text-[#F7F7F7] sm:text-2xl">{editingLogId ? 'Update calorie log' : 'Enter calories manually'}</h2></div>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1"><Input label="Date" type="date" value={manualForm.loggedDate} onChange={(e) => setManualForm((current) => ({ ...current, loggedDate: e.target.value }))} /><Select label="Meal type" value={manualForm.mealType} onChange={(e) => setManualForm((current) => ({ ...current, mealType: e.target.value as CalorieLog['mealType'] }))} options={mealTypeOptions} /></div>
-                <Input label="Meal title" value={manualForm.title} onChange={(e) => setManualForm((current) => ({ ...current, title: e.target.value }))} placeholder="Paneer wrap, oats bowl, whey shake..." />
-                <div className="grid gap-4 sm:grid-cols-2"><Input label="Calories" type="number" min="0" value={manualForm.calories} onChange={(e) => setManualForm((current) => ({ ...current, calories: e.target.value }))} placeholder="450" /><Input label="Protein (g)" type="number" min="0" value={manualForm.proteinGrams} onChange={(e) => setManualForm((current) => ({ ...current, proteinGrams: e.target.value }))} placeholder="30" /><Input label="Carbs (g)" type="number" min="0" value={manualForm.carbsGrams} onChange={(e) => setManualForm((current) => ({ ...current, carbsGrams: e.target.value }))} placeholder="55" /><Input label="Fats (g)" type="number" min="0" value={manualForm.fatsGrams} onChange={(e) => setManualForm((current) => ({ ...current, fatsGrams: e.target.value }))} placeholder="14" /></div>
-                <Textarea label="Notes" rows={3} value={manualForm.notes} onChange={(e) => setManualForm((current) => ({ ...current, notes: e.target.value }))} />
-                <div className="flex flex-wrap gap-3 border-t border-white/10 pt-4"><Button variant="accent" onClick={() => void handleSaveManual()} isLoading={actionState === 'manual-save' || (editingLogId != null && actionState === `update-${editingLogId}`)}>{editingLogId ? 'Save Changes' : 'Add Manual Entry'}</Button>{(editingLogId || estimate) ? <Button variant="secondary" onClick={resetComposer}>Cancel</Button> : null}</div>
-              </div>
-            )}
-          </Card>
+          <Suspense fallback={<SectionFallback />}>
+            <CaloriesComposerPanel
+              actionState={actionState}
+              aiMealText={aiMealText}
+              aiMealType={aiMealType}
+              editingLogId={editingLogId}
+              estimate={estimate}
+              hasPremiumAccess={hasPremiumAccess}
+              manualForm={manualForm}
+              mealTypeOptions={mealTypeOptions}
+              mode={mode}
+              onAiMealTextChange={setAiMealText}
+              onAiMealTypeChange={setAiMealType}
+              onEstimate={() => void handleEstimate()}
+              onManualFormChange={setManualForm}
+              onModeChange={setMode}
+              onReset={resetComposer}
+              onSaveEstimate={() => void handleSaveEstimate()}
+              onSaveManual={() => void handleSaveManual()}
+              onSwitchToBilling={() => navigate('/billing')}
+              onSwitchToManualFromEstimate={(nextEstimate) => {
+                setMode('manual');
+                setManualForm({
+                  loggedDate: nextEstimate.loggedDate,
+                  mealType: nextEstimate.mealType,
+                  title: nextEstimate.title,
+                  calories: String(nextEstimate.calories),
+                  proteinGrams: String(nextEstimate.proteinGrams),
+                  carbsGrams: String(nextEstimate.carbsGrams),
+                  fatsGrams: String(nextEstimate.fatsGrams),
+                  notes: nextEstimate.notes ?? '',
+                });
+              }}
+            />
+          </Suspense>
 
           <div className="space-y-5">
             <Card variant="gradient" className="space-y-5 rounded-[1.6rem] p-4 sm:p-6">
@@ -718,10 +742,19 @@ export const CaloriesPage: React.FC = () => {
               <div className="space-y-3">{dailyData?.entries.length ? dailyData.entries.map((entry) => <div key={entry.id} className="flex flex-col gap-4 rounded-2xl border border-[#2e303a] bg-[#11131d] p-4 lg:flex-row lg:items-center lg:justify-between"><div className="space-y-2"><div className="flex flex-wrap items-center gap-2"><span className="rounded-full border border-[#00FF88]/30 bg-[#00FF88]/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.2em] text-[#00FF88]">{formatMealLabel(entry.mealType)}</span><span className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-[#8f97ab]">{entry.source ?? 'manual'}</span><p className="text-sm text-[#8f97ab]">{entry.calories} kcal</p></div><h3 className="text-lg font-semibold text-[#F7F7F7]">{entry.title}</h3>{entry.rawInput ? <p className="text-sm leading-6 text-[#8f97ab]">{entry.rawInput}</p> : null}<p className="text-sm text-[#98a3b8]">P {entry.proteinGrams ?? 0}g | C {entry.carbsGrams ?? 0}g | F {entry.fatsGrams ?? 0}g</p>{entry.parsedItems?.length ? <p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">{entry.parsedItems.length} parsed items | {Math.round((entry.confidence ?? 0) * 100)}% confidence</p> : null}</div><div className="flex gap-3"><Button variant="secondary" size="sm" onClick={() => handleEdit(entry)}>Edit</Button><Button variant="secondary" size="sm" onClick={() => void handleDelete(entry)} isLoading={actionState === `delete-${entry.id}`}>Delete</Button></div></div>) : <div className="rounded-2xl border border-dashed border-[#2e303a] bg-[#10131d] p-6 text-sm leading-7 text-[#98a3b8]">{hasPremiumAccess ? 'No entries logged for this day yet. Use AI logging for speed or add your meals manually.' : 'No entries logged for this day yet. Start with the manual logger or upgrade to unlock faster AI meal estimation.'}</div>}</div>
             </Card>
 
-            <Card variant="glass" className="space-y-5 rounded-[1.6rem] p-4 sm:p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#00FF88]">Monthly review</p><h2 className="mt-1 text-xl font-bold text-[#F7F7F7] sm:text-2xl">{formatMonthLabel(selectedMonth)}</h2></div><Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="max-w-full sm:max-w-[220px]" /></div>
-              {monthlySummary ? <div className="space-y-5"><div className="grid grid-cols-2 gap-3 md:grid-cols-4">{[['Target', `${displayMonthlyTargetCalories}`], ['Days logged', `${monthlySummary.daysLogged}/${monthlySummary.daysInMonth}`], ['Avg protein', `${monthlySummary.averageProteinGrams}g`], ['Entries', `${monthlySummary.entriesCount}`]].map(([label, value]) => <Card key={label} className="space-y-2 border-white/10 bg-[#0e1420] p-4"><p className="text-xs uppercase tracking-[0.18em] text-[#8f97ab]">{label}</p><p className="text-2xl font-bold text-[#F7F7F7]">{value}</p></Card>)}</div><div className="grid gap-5 lg:grid-cols-2"><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Daily breakdown</p><div className="mt-4 space-y-3">{monthlySummary.dailyBreakdown.length ? monthlySummary.dailyBreakdown.slice().reverse().slice(0, 6).map((day) => <div key={day.date} className="flex items-center justify-between rounded-xl border border-[#2e303a] bg-[#0f1320] px-4 py-3"><div><p className="font-medium text-[#F7F7F7]">{formatDateLabel(day.date)}</p><p className="text-xs uppercase tracking-[0.16em] text-[#8f97ab]">{day.entryCount} entries</p></div><div className="text-right"><p className="font-semibold text-[#F7F7F7]">{day.calories} kcal</p></div></div>) : <p className="text-sm leading-7 text-[#98a3b8]">No monthly data yet.</p>}</div></div><div className="rounded-2xl border border-[#2e303a] bg-[#11131d] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8f97ab]">Recommendations</p><p className="mt-2 text-sm text-[#98a3b8]">{hasPremiumAccess ? 'Use the built-in guidance or ask AI for a sharper monthly read.' : 'Use the built-in guidance below. Premium unlocks a deeper AI monthly review.'}</p></div>{hasPremiumAccess ? <Button variant="secondary" size="sm" onClick={() => void handleGenerateAiInsights()} isLoading={actionState === 'ai-insights'}>AI Review</Button> : <Button variant="secondary" size="sm" onClick={() => navigate('/billing')}>Unlock AI Review</Button>}</div><div className="mt-4 space-y-3">{monthlySummary.recommendations.map((item) => <div key={item} className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-6 text-[#d5d9e3]">{item}</div>)}{aiInsights ? <div className="rounded-xl border border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#d5d9e3]">{aiInsights}</div> : !hasPremiumAccess ? <div className="rounded-xl border border-dashed border-[#2e303a] bg-[#0f1320] p-4 text-sm leading-7 text-[#98a3b8]">Premium adds an AI-written monthly review on top of these built-in recommendations.</div> : null}</div></div></div></div> : null}
-            </Card>
+            <Suspense fallback={<SectionFallback />}>
+              <CaloriesMonthlyReview
+                actionState={actionState}
+                aiInsights={aiInsights}
+                displayMonthlyTargetCalories={displayMonthlyTargetCalories}
+                hasPremiumAccess={hasPremiumAccess}
+                monthlySummary={monthlySummary}
+                onGenerateAiInsights={() => void handleGenerateAiInsights()}
+                onGoBilling={() => navigate('/billing')}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

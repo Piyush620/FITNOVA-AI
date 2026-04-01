@@ -7,3 +7,4 @@ export { Textarea } from './Textarea';
 export { Breadcrumbs } from './Breadcrumbs';
 export { PremiumFeatureGate } from './PremiumFeatureGate';
 export { LiveCalendar } from './LiveCalendar';
+export { FormattedAiText } from './FormattedAiText';

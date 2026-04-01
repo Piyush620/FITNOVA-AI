@@ -143,7 +143,7 @@ export default function WorkoutsScreen() {
     setActionKey(`complete:${planId}:${dayNumber}`);
 
     try {
-      const response = await workoutsAPI.completeSession(planId, dayNumber);
+      const response = await workoutsAPI.completeSession(planId, dayNumber, selectedDate);
       setActivePlan(response.data.status === 'active' || response.data.status === 'completed' ? response.data : null);
       await loadPlans();
       showToast({ title: 'Nice work', message: `Day ${dayNumber} has been marked complete.`, tone: 'success' });

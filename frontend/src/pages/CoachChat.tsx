@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../components/Layout';
-import { Breadcrumbs, Card, Button, PremiumFeatureGate, Textarea } from '../components/Common';
+import { Breadcrumbs, Card, Button, FormattedAiText, PremiumFeatureGate, Textarea } from '../components/Common';
 import { aiAPI, getApiErrorMessage } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -319,7 +319,10 @@ export const CoachChatPage: React.FC = () => {
                     }`}
                     style={{ animationDelay: `${Math.min(index * 35, 160)}ms` }}
                   >
-                    <p className="whitespace-pre-wrap text-sm leading-7 sm:text-[15px]">{msg.content}</p>
+                    <FormattedAiText
+                      text={msg.content}
+                      className="text-sm leading-7 sm:text-[15px]"
+                    />
                     {msg.meta ? (
                       <p className={`mt-3 text-[11px] uppercase tracking-[0.18em] ${msg.role === 'user' ? 'text-[#4a5162]' : 'text-[#8f97ab]'}`}>
                         {msg.meta}

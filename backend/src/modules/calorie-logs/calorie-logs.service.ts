@@ -466,7 +466,7 @@ export class CalorieLogsService {
       mealType,
     });
 
-    matchedMeal.completedAt = hasLoggedMeal ? matchedMeal.completedAt ?? targetDate : undefined;
+    matchedMeal.completedAt = hasLoggedMeal ? targetDate : undefined;
 
     const isPlanCompleted = activeDietPlan.days.every((day) => day.meals.every((meal) => !!meal.completedAt));
     activeDietPlan.status = isPlanCompleted ? DietPlanStatus.COMPLETED : DietPlanStatus.ACTIVE;

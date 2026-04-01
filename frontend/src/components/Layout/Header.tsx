@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../Common';
 import { useTheme } from '../../hooks/useTheme';
+import { preloadRoute } from '../../App';
 
 const getInitials = (name?: string, email?: string) => {
   const source = name?.trim() || email || 'F';
@@ -38,6 +39,10 @@ export const Header: React.FC = () => {
   const navLinkClass = (path: string) =>
     isActivePath(path) ? 'theme-nav-link theme-nav-link-active' : 'theme-nav-link';
 
+  const warmRoute = (path: string) => {
+    void preloadRoute(path);
+  };
+
   return (
     <header className="theme-header sticky top-0 z-50 border-b">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -62,6 +67,8 @@ export const Header: React.FC = () => {
                   <button
                     key={item.path}
                     type="button"
+                    onMouseEnter={() => warmRoute(item.path)}
+                    onFocus={() => warmRoute(item.path)}
                     onClick={() => navigate(item.path)}
                     className={navLinkClass(item.path)}
                   >
@@ -79,6 +86,8 @@ export const Header: React.FC = () => {
                 <div className="theme-header-divider ml-3 flex items-center gap-3 pl-3">
                   <button
                     type="button"
+                    onMouseEnter={() => warmRoute('/profile')}
+                    onFocus={() => warmRoute('/profile')}
                     onClick={() => navigate('/profile')}
                     className="theme-profile-chip flex items-center gap-3 rounded-[1rem] px-2 py-1.5 transition-all duration-300 hover:-translate-y-0.5"
                   >
@@ -172,6 +181,8 @@ export const Header: React.FC = () => {
                   <button
                     key={item.path}
                     type="button"
+                    onMouseEnter={() => warmRoute(item.path)}
+                    onFocus={() => warmRoute(item.path)}
                     onClick={() => {
                       navigate(item.path);
                       setIsMenuOpen(false);
