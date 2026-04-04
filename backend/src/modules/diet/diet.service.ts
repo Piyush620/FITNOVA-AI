@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { CalorieLog, CalorieLogDocument } from 'src/modules/calorie-logs/schemas/calorie-log.schema';
+import { resolvePlanDayByDate, resolveTargetDate } from 'src/common/utils/plan-schedule';
 
 import { CreateDietPlanDto } from './dto/create-diet-plan.dto';
 import { DietPlan, DietPlanDocument, DietPlanStatus, MealEntry } from './schemas/diet-plan.schema';
@@ -174,6 +175,13 @@ export class DietService {
     completedDate?: string,
   ) {
     const plan = await this.findOwnedPlan(userId, planId);
+    const targetDate = resolveTargetDate(completedDate);
+    const scheduledDay = resolvePlanDayByDate(plan, targetDate);
+
+    if (!scheduledDay || scheduledDay.dayNumber !== dayNumber) {
+      throw new BadRequestException('The selected calendar date does not match this diet day.');
+    }
+
     const dietDay = plan.days.find((day) => day.dayNumber === dayNumber);
 
     if (!dietDay) {
@@ -185,7 +193,7 @@ export class DietService {
       throw new NotFoundException(`Meal "${mealType}" was not found on day ${dayNumber}.`);
     }
 
-    meal.completedAt = this.resolveCompletedAt(completedDate);
+    meal.completedAt = targetDate;
     await this.syncCompletedMealToCalories(userId, meal, meal.completedAt);
 
     if (plan.days.every((day) => day.meals.every((entry) => !!entry.completedAt))) {
@@ -233,14 +241,6 @@ export class DietService {
       notes: meal.description,
       rawInput: meal.items?.join(', '),
     });
-  }
-
-  private resolveCompletedAt(completedDate?: string) {
-    if (completedDate) {
-      return new Date(`${completedDate}T12:00:00.000Z`);
-    }
-
-    return new Date();
   }
 
   private async findOwnedPlan(userId: string, planId: string) {

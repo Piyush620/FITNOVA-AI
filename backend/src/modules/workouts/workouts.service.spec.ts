@@ -113,7 +113,7 @@ describe('WorkoutsService', () => {
       level: 'intermediate',
       equipment: [],
       status: WorkoutPlanStatus.ACTIVE,
-      startDate: undefined,
+      startDate: new Date('2026-03-24T12:00:00.000Z'),
       endDate: undefined,
       isAiGenerated: false,
       notes: undefined,
@@ -140,5 +140,34 @@ describe('WorkoutsService', () => {
     expect(existingLog.rawInput).toBe('Bike Intervals');
     expect(saveLog).toHaveBeenCalled();
     expect(plan.status).toBe(WorkoutPlanStatus.COMPLETED);
+  });
+
+  it('rejects completion when the selected date maps to a different workout day', async () => {
+    const plan = {
+      id: planId,
+      userId: { toString: () => userId },
+      title: 'Strength Builder',
+      goal: 'strength',
+      level: 'beginner',
+      equipment: [],
+      status: WorkoutPlanStatus.ACTIVE,
+      startDate: new Date('2026-04-01T12:00:00.000Z'),
+      endDate: undefined,
+      isAiGenerated: false,
+      notes: undefined,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      days: [
+        { dayNumber: 1, dayLabel: 'Monday', focus: 'Lower Body', exercises: [], completedAt: undefined },
+        { dayNumber: 2, dayLabel: 'Tuesday', focus: 'Upper Body', exercises: [], completedAt: undefined },
+      ],
+      save: jest.fn(),
+    };
+
+    mockWorkoutPlanModel.findOne.mockResolvedValue(plan);
+
+    await expect(service.completeSession(userId, planId, 2, '2026-04-01')).rejects.toThrow(
+      'The selected calendar date does not match this workout day.',
+    );
   });
 });

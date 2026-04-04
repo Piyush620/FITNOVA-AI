@@ -13,7 +13,8 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { dietBudgetOptions, dietCuisineOptions, dietPreferenceOptions } from '@/constants/fitness';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { formatDateLabel, getWeekdayName } from '@/lib/calendar';
+import { formatDateLabel } from '@/lib/calendar';
+import { resolvePlanDayByDate } from '@/lib/planSchedule';
 import { aiAPI, dietAPI } from '@/services/api';
 import { useCalendarStore } from '@/stores/calendarStore';
 import type { DietPlan, Meal } from '@/types';
@@ -82,10 +83,23 @@ export default function DietScreen() {
     [activePlan, plans],
   );
   const selectedDay = useMemo(
-    () => selectedPlan?.days.find((day) => day.dayLabel === getWeekdayName(selectedDate)) ?? null,
+    () => resolvePlanDayByDate(selectedPlan, selectedDate),
     [selectedDate, selectedPlan],
   );
   const hasPremiumAccess = user?.subscription?.hasPremiumAccess ?? false;
+
+  const toIsoDate = (value?: string | Date | null) => {
+    if (!value) {
+      return null;
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toISOString().slice(0, 10);
+  };
 
   useEffect(() => {
     setGeneratorForm((current) => {
@@ -417,7 +431,7 @@ export default function DietScreen() {
               {selectedDay.theme ? <AppText tone="muted">{selectedDay.theme}</AppText> : null}
               {selectedDay.targetCalories ? <AppText tone="muted">{selectedDay.targetCalories} kcal target</AppText> : null}
               {selectedDay.meals.map((meal) => {
-                const isCompleted = Boolean(meal.completedAt);
+                const isCompleted = toIsoDate(meal.completedAt) === selectedDate;
 
                 return (
                   <View key={`${selectedDay.dayNumber}-${meal.type}`} style={styles.mealRow}>

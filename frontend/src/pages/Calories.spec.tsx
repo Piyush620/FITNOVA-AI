@@ -84,11 +84,11 @@ describe('CaloriesPage', () => {
           hasPremiumAccess: true,
           stripeCustomerId: 'cus_123',
           stripeSubscriptionId: 'sub_123',
-          currentPeriodStart: '2026-03-01T00:00:00.000Z',
-          currentPeriodEnd: '2026-04-01T00:00:00.000Z',
+          currentPeriodStart: '2026-04-01T00:00:00.000Z',
+          currentPeriodEnd: '2026-05-01T00:00:00.000Z',
           cancelAtPeriodEnd: false,
         },
-        createdAt: '2026-03-01T00:00:00.000Z',
+        createdAt: '2026-04-01T00:00:00.000Z',
       },
       accessToken: 'token',
       isLoading: false,
@@ -108,7 +108,7 @@ describe('CaloriesPage', () => {
 
     mockGetDaily.mockResolvedValue({
       ...createAxiosResponse({
-        date: '2026-03-27',
+        date: '2026-04-01',
         targetCalories: 2200,
         totals: {
           calories: 900,
@@ -120,14 +120,14 @@ describe('CaloriesPage', () => {
           {
             id: 'entry-1',
             userId: 'user-1',
-            loggedDate: '2026-03-27',
+            loggedDate: '2026-04-01',
             mealType: 'breakfast',
             title: 'Oats bowl',
             calories: 450,
             proteinGrams: 20,
             carbsGrams: 55,
             fatsGrams: 10,
-            createdAt: '2026-03-27T08:00:00.000Z',
+            createdAt: '2026-04-01T08:00:00.000Z',
           },
         ],
       }),
@@ -135,7 +135,7 @@ describe('CaloriesPage', () => {
 
     mockGetMonthlySummary.mockResolvedValue({
       ...createAxiosResponse({
-        month: '2026-03',
+        month: '2026-04',
         targetCalories: 2200,
         totalCalories: 22000,
         averageDailyCalories: 710,
@@ -148,7 +148,7 @@ describe('CaloriesPage', () => {
         entriesCount: 27,
         dailyBreakdown: [
           {
-            date: '2026-03-27',
+            date: '2026-04-01',
             calories: 900,
             proteinGrams: 55,
             carbsGrams: 90,
@@ -164,7 +164,7 @@ describe('CaloriesPage', () => {
       ...createAxiosResponse({
         id: 'entry-2',
         userId: 'user-1',
-        loggedDate: '2026-03-27',
+        loggedDate: '2026-04-01',
         mealType: 'lunch',
         title: 'Chicken wrap',
         source: 'manual',
@@ -172,7 +172,7 @@ describe('CaloriesPage', () => {
         proteinGrams: 45,
         carbsGrams: 50,
         fatsGrams: 20,
-        createdAt: '2026-03-27T12:00:00.000Z',
+        createdAt: '2026-04-01T12:00:00.000Z',
       }, 201, 'Created'),
     })
 
@@ -181,9 +181,9 @@ describe('CaloriesPage', () => {
         type: 'calorie-insights',
         provider: 'gemini',
         model: 'gemini-2.5-flash',
-        month: '2026-03',
+        month: '2026-04',
         content: 'Your intake is drifting higher on weekends. Tighten two meals first.',
-        generatedAt: '2026-03-27T00:00:00.000Z',
+        generatedAt: '2026-04-01T00:00:00.000Z',
       }),
     });
 
@@ -197,10 +197,10 @@ describe('CaloriesPage', () => {
         targetCalories: 2200,
         status: 'active',
         isAiGenerated: true,
-        startDate: '2026-03-27T00:00:00.000Z',
-        endDate: '2026-04-02T00:00:00.000Z',
-        createdAt: '2026-03-27T00:00:00.000Z',
-        updatedAt: '2026-03-27T00:00:00.000Z',
+        startDate: '2026-04-01T00:00:00.000Z',
+        endDate: '2026-04-07T00:00:00.000Z',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-04-01T00:00:00.000Z',
         days: [
           {
             dayNumber: 1,
@@ -237,7 +237,7 @@ describe('CaloriesPage', () => {
     });
 
     expect(screen.getByText('Oats bowl')).toBeInTheDocument();
-    expect(screen.getByText('Keep protein steady on weekdays.')).toBeInTheDocument();
+    expect(await screen.findByText('Keep protein steady on weekdays.')).toBeInTheDocument();
     expect(screen.getByText('1300')).toBeInTheDocument();
     expect(screen.getByText('Diet-linked quick log')).toBeInTheDocument();
   });
@@ -290,7 +290,7 @@ describe('CaloriesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'AI Review' }));
 
     await waitFor(() => {
-      expect(mockGetCalorieInsights).toHaveBeenCalledWith('2026-03');
+      expect(mockGetCalorieInsights).toHaveBeenCalledWith('2026-04');
     });
 
     expect(

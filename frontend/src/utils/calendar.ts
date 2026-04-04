@@ -1,5 +1,18 @@
-export const today = () => new Date().toISOString().slice(0, 10);
-export const currentMonth = () => new Date().toISOString().slice(0, 7);
+const toLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toLocalMonthString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+export const today = () => toLocalDateString(new Date());
+export const currentMonth = () => toLocalMonthString(new Date());
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
@@ -67,21 +80,21 @@ export const formatWeekdayLabel = (value: string) => {
 export const getWeekdayName = (value: string) => {
   const date = parseDateValue(value);
   if (!date) return '';
-  return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(date);
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
 };
 
 export const shiftDate = (value: string, offset: number) => {
   const date = parseDateValue(value) ?? parseDateValue(today());
   if (!date) return today();
   date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
+  return toLocalDateString(date);
 };
 
 export const shiftMonth = (value: string, offset: number) => {
   const date = parseMonthValue(value) ?? parseMonthValue(currentMonth());
   if (!date) return currentMonth();
   date.setMonth(date.getMonth() + offset);
-  return date.toISOString().slice(0, 7);
+  return toLocalMonthString(date);
 };
 
 export const buildWeekDates = (centerDate: string) => {
@@ -93,6 +106,6 @@ export const buildWeekDates = (centerDate: string) => {
   return Array.from({ length: 7 }, (_, index) => {
     const next = new Date(date);
     next.setDate(date.getDate() + mondayOffset + index);
-    return next.toISOString().slice(0, 10);
+    return toLocalDateString(next);
   });
 };

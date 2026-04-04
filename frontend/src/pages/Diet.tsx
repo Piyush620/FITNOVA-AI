@@ -9,7 +9,8 @@ import { aiAPI, dietAPI, getApiErrorMessage, workoutsAPI } from '../services/api
 import { toastSuccess, toastError } from '../utils/toast';
 import type { DietDay, DietPlan, GenerateDietPlanPayload, Meal, WorkoutPlan } from '../types';
 import { notifyDietChanged } from '../utils/appSync';
-import { formatDateLabel, getWeekdayName } from '../utils/calendar';
+import { formatDateLabel } from '../utils/calendar';
+import { resolvePlanDayByDate } from '../utils/planSchedule';
 import { estimateGoalCalories } from '../utils/calorieTarget';
 
 type ApiErrorResponse = {
@@ -308,7 +309,7 @@ export const DietPage: React.FC = () => {
     plans[0] ??
     null;
   const selectedDay = useMemo(
-    () => selectedPlan?.days.find((day) => day.dayLabel.toLowerCase() === getWeekdayName(selectedDate).toLowerCase()) ?? null,
+    () => resolvePlanDayByDate(selectedPlan, selectedDate),
     [selectedDate, selectedPlan],
   );
   const selectedPlanNutrition = selectedPlan ? calculatePlanNutrition(selectedPlan) : null;

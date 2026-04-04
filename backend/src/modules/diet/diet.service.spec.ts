@@ -122,7 +122,7 @@ describe('DietService', () => {
       preference: 'balanced',
       targetCalories: 2200,
       status: DietPlanStatus.ACTIVE,
-      startDate: undefined,
+      startDate: new Date('2026-03-24T12:00:00.000Z'),
       endDate: undefined,
       isAiGenerated: false,
       notes: undefined,
@@ -157,5 +157,36 @@ describe('DietService', () => {
     expect(existingLog.rawInput).toBe('Salmon, Potatoes, Greens');
     expect(saveLog).toHaveBeenCalled();
     expect(plan.status).toBe(DietPlanStatus.COMPLETED);
+  });
+
+  it('rejects completion when the selected date maps to a different diet day', async () => {
+    const meal = {
+      type: 'dinner',
+      title: 'Salmon Plate',
+      completedAt: undefined as Date | undefined,
+    };
+    const plan = {
+      id: planId,
+      userId: { toString: () => userId },
+      title: 'Performance Cut',
+      goal: 'fat loss',
+      preference: 'balanced',
+      targetCalories: 2200,
+      status: DietPlanStatus.ACTIVE,
+      startDate: new Date('2026-04-01T12:00:00.000Z'),
+      endDate: undefined,
+      isAiGenerated: false,
+      notes: undefined,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-01T00:00:00.000Z'),
+      days: [{ dayNumber: 2, dayLabel: 'Tuesday', meals: [meal] }],
+      save: jest.fn(),
+    };
+
+    mockDietPlanModel.findOne.mockResolvedValue(plan);
+
+    await expect(service.completeMeal(userId, planId, 2, 'dinner', '2026-04-01')).rejects.toThrow(
+      'The selected calendar date does not match this diet day.',
+    );
   });
 });

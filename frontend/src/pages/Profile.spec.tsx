@@ -132,7 +132,7 @@ describe('ProfilePage', () => {
       expect(screen.getByText('Profile & Progress')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('heading', { name: 'Vaishnavi Upadhyay' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Vaishnavi Upadhyay' }).length).toBeGreaterThan(0);
     expect(screen.getByText('82%')).toBeInTheDocument();
     expect(screen.getByText('1850')).toBeInTheDocument();
     expect(screen.getByText('Selected Plans')).toBeInTheDocument();

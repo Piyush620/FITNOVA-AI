@@ -9,7 +9,8 @@ import { aiAPI, getApiErrorMessage, workoutsAPI } from '../services/api';
 import { toastSuccess, toastError } from '../utils/toast';
 import type { GenerateWorkoutPlanPayload, WorkoutDay, WorkoutPlan } from '../types';
 import { notifyWorkoutChanged } from '../utils/appSync';
-import { formatDateLabel, getWeekdayName } from '../utils/calendar';
+import { formatDateLabel } from '../utils/calendar';
+import { resolvePlanDayByDate } from '../utils/planSchedule';
 
 type ApiErrorResponse = {
   message?: string | string[];
@@ -222,7 +223,7 @@ export const WorkoutsPage: React.FC = () => {
     plans[0] ??
     null;
   const selectedDay = useMemo(
-    () => selectedPlan?.days.find((day) => day.dayLabel.toLowerCase() === getWeekdayName(selectedDate).toLowerCase()) ?? null,
+    () => resolvePlanDayByDate(selectedPlan, selectedDate),
     [selectedDate, selectedPlan],
   );
   const selectedPlanCompletedDays =

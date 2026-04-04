@@ -1,12 +1,25 @@
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
+const toLocalDateString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const toLocalMonthString = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalDateString(new Date());
 }
 
 export function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return toLocalMonthString(new Date());
 }
 
 export function parseDateValue(value: string) {
@@ -77,7 +90,7 @@ export function shiftDate(value: string, offset: number) {
   }
 
   date.setDate(date.getDate() + offset);
-  return date.toISOString().slice(0, 10);
+  return toLocalDateString(date);
 }
 
 export function shiftMonth(value: string, offset: number) {
@@ -87,7 +100,7 @@ export function shiftMonth(value: string, offset: number) {
   }
 
   date.setMonth(date.getMonth() + offset);
-  return date.toISOString().slice(0, 7);
+  return toLocalMonthString(date);
 }
 
 export function buildWeekDates(centerDate: string) {
@@ -102,7 +115,7 @@ export function buildWeekDates(centerDate: string) {
   return Array.from({ length: 7 }, (_, index) => {
     const next = new Date(date);
     next.setDate(date.getDate() + mondayOffset + index);
-    return next.toISOString().slice(0, 10);
+    return toLocalDateString(next);
   });
 }
 
@@ -112,5 +125,5 @@ export function getWeekdayName(value: string) {
     return '';
   }
 
-  return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(date);
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(date);
 }

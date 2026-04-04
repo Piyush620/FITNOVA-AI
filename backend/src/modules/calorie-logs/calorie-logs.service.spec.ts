@@ -17,6 +17,7 @@ describe('CalorieLogsService', () => {
   beforeEach(async () => {
     mockCalorieLogModel = {
       create: jest.fn(),
+      exists: jest.fn(),
       find: jest.fn(),
       findOne: jest.fn(),
       findOneAndDelete: jest.fn(),
@@ -212,5 +213,182 @@ describe('CalorieLogsService', () => {
     const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-03-27');
 
     expect(result.targetCalories).toBe(3325);
+  });
+
+  it('maps selected dates to plan days from the active plan start date instead of weekday label reuse', async () => {
+    mockCalorieLogModel.find.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mockUserModel.findById.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        profile: {
+          age: 29,
+          gender: 'male',
+          heightCm: 178,
+          weightKg: 82,
+          activityLevel: 'moderate',
+          goal: 'fat loss',
+        },
+      }),
+    });
+    mockDietPlanModel.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        startDate: new Date('2026-04-01T12:00:00.000Z'),
+        targetCalories: 2200,
+        days: [
+          { dayNumber: 1, dayLabel: 'Monday', theme: 'Lift', targetCalories: 2200, meals: [] },
+          { dayNumber: 2, dayLabel: 'Tuesday', theme: 'Push', targetCalories: 2350, meals: [] },
+          { dayNumber: 3, dayLabel: 'Wednesday', theme: 'Pull', targetCalories: 2500, meals: [] },
+        ],
+      }),
+    });
+    mockWorkoutPlanModel.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        startDate: new Date('2026-04-01T12:00:00.000Z'),
+        days: [
+          {
+            dayNumber: 1,
+            dayLabel: 'Monday',
+            focus: 'Lower Body',
+            durationMinutes: 55,
+            completedAt: undefined,
+          },
+          {
+            dayNumber: 2,
+            dayLabel: 'Tuesday',
+            focus: 'Push Strength',
+            durationMinutes: 65,
+            completedAt: undefined,
+          },
+          {
+            dayNumber: 3,
+            dayLabel: 'Wednesday',
+            focus: 'Pull Strength',
+            durationMinutes: 70,
+            completedAt: new Date('2026-04-03T12:00:00.000Z'),
+          },
+        ],
+      }),
+    });
+
+    const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-04-03');
+
+    expect(result.targetCalories).toBe(2500);
+    expect(result.targetSource).toBe('active-diet-day');
+    expect(result.plannedNutritionDay).toEqual({
+      dayLabel: 'Wednesday',
+      theme: 'Pull',
+      targetCalories: 2500,
+    });
+    expect(result.activeWorkoutDay).toEqual({
+      dayLabel: 'Wednesday',
+      focus: 'Pull Strength',
+      durationMinutes: 70,
+      isTrainingDay: true,
+      completedAt: new Date('2026-04-03T12:00:00.000Z'),
+      isCompleted: true,
+    });
+  });
+
+  it('does not reuse an old weekday match once the selected date falls outside the active plan timeline', async () => {
+    mockCalorieLogModel.find.mockReturnValue({
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mockUserModel.findById.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        profile: {
+          age: 29,
+          gender: 'male',
+          heightCm: 178,
+          weightKg: 82,
+          activityLevel: 'moderate',
+          goal: 'fat loss',
+        },
+      }),
+    });
+    mockDietPlanModel.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        startDate: new Date('2026-04-01T12:00:00.000Z'),
+        targetCalories: 2200,
+        days: [
+          { dayNumber: 1, dayLabel: 'Monday', theme: 'Lift', targetCalories: 2200, meals: [] },
+          { dayNumber: 2, dayLabel: 'Tuesday', theme: 'Push', targetCalories: 2350, meals: [] },
+          { dayNumber: 3, dayLabel: 'Wednesday', theme: 'Pull', targetCalories: 2500, meals: [] },
+        ],
+      }),
+    });
+    mockWorkoutPlanModel.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        startDate: new Date('2026-04-01T12:00:00.000Z'),
+        days: [
+          {
+            dayNumber: 1,
+            dayLabel: 'Monday',
+            focus: 'Lower Body',
+            durationMinutes: 55,
+            completedAt: undefined,
+          },
+          {
+            dayNumber: 2,
+            dayLabel: 'Tuesday',
+            focus: 'Push Strength',
+            durationMinutes: 65,
+            completedAt: undefined,
+          },
+          {
+            dayNumber: 3,
+            dayLabel: 'Wednesday',
+            focus: 'Pull Strength',
+            durationMinutes: 70,
+            completedAt: undefined,
+          },
+        ],
+      }),
+    });
+
+    const result = await service.getDailyLogs('507f1f77bcf86cd799439011', '2026-04-15');
+
+    expect(result.targetCalories).toBe(2200);
+    expect(result.targetSource).toBe('active-diet-plan');
+    expect(result.plannedNutritionDay).toBeNull();
+    expect(result.activeWorkoutDay).toBeNull();
+  });
+
+  it('syncs calorie-log meal completion to the correct diet day based on the plan timeline', async () => {
+    const savePlan = jest.fn().mockResolvedValue(undefined);
+    const mondayMeal = { type: 'breakfast', title: 'Monday Oats', completedAt: undefined };
+    const fridayMeal = { type: 'breakfast', title: 'Friday Oats', completedAt: undefined };
+    const activeDietPlan = {
+      status: 'active',
+      startDate: new Date('2026-04-01T12:00:00.000Z'),
+      days: [
+        { dayNumber: 1, dayLabel: 'Monday', meals: [mondayMeal] },
+        { dayNumber: 3, dayLabel: 'Friday', meals: [fridayMeal] },
+      ],
+      save: savePlan,
+    };
+
+    mockCalorieLogModel.create.mockResolvedValue({
+      _id: { toString: () => 'log-1' },
+      userId: { toString: () => '507f1f77bcf86cd799439011' },
+      loggedDate: '2026-04-03',
+      mealType: 'breakfast',
+      title: 'Friday Oats',
+      source: 'manual',
+    });
+    mockCalorieLogModel.exists.mockResolvedValue(true);
+    mockDietPlanModel.findOne.mockResolvedValue(activeDietPlan);
+
+    await service.createLog('507f1f77bcf86cd799439011', {
+      loggedDate: '2026-04-03',
+      mealType: 'breakfast',
+      title: 'Friday Oats',
+      calories: 420,
+      source: 'manual',
+    });
+
+    expect(fridayMeal.completedAt).toEqual(new Date('2026-04-03T12:00:00.000Z'));
+    expect(mondayMeal.completedAt).toBeUndefined();
+    expect(savePlan).toHaveBeenCalled();
   });
 });

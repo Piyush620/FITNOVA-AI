@@ -1,6 +1,6 @@
 # FitNova Mobile
 
-Expo Router mobile client scaffold for FitNova AI.
+Expo Router mobile client for FitNova AI.
 
 This is a separate client from the web app.
 
@@ -16,7 +16,12 @@ The current repo structure is:
 - Zustand auth store backed by AsyncStorage
 - Axios API client with token refresh support
 - Dashboard screen wired to the real backend summary endpoint
-- Placeholder screens for workouts, diet, coach, calories, and profile
+- Real backend-backed tabs for dashboard, workouts, diet, calories, coach, and profile
+- Shared live calendar across workouts, diet, and calories
+- Diet and workout day detail flows tied to the selected calendar date
+- Premium-aware AI coach chat with persisted history hydration
+- Meal logging and reminder-notification support
+- Jest coverage for auth store, API refresh handling, login, and dashboard flows
 
 ## Environment
 

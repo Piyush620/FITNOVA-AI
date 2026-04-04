@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,6 +8,7 @@ import { Model, Types } from 'mongoose';
 
 import { CalorieLog, CalorieLogDocument } from 'src/modules/calorie-logs/schemas/calorie-log.schema';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { resolvePlanDayByDate, resolveTargetDate } from 'src/common/utils/plan-schedule';
 
 import {
   WorkoutPlan,
@@ -176,13 +178,20 @@ export class WorkoutsService {
     completedDate?: string,
   ) {
     const plan = await this.findOwnedPlan(userId, planId);
+    const targetDate = resolveTargetDate(completedDate);
+    const scheduledDay = resolvePlanDayByDate(plan, targetDate);
+
+    if (!scheduledDay || scheduledDay.dayNumber !== dayNumber) {
+      throw new BadRequestException('The selected calendar date does not match this workout day.');
+    }
+
     const workoutDay = plan.days.find((day) => day.dayNumber === dayNumber);
 
     if (!workoutDay) {
       throw new NotFoundException(`Workout day ${dayNumber} was not found in this plan.`);
     }
 
-    workoutDay.completedAt = this.resolveCompletedAt(completedDate);
+    workoutDay.completedAt = targetDate;
     await this.syncCompletedWorkoutToCalories(userId, plan, workoutDay, workoutDay.completedAt);
     if (plan.days.every((day) => !!day.completedAt)) {
       plan.status = WorkoutPlanStatus.COMPLETED;
@@ -247,14 +256,6 @@ export class WorkoutsService {
       notes: `${plan.title} | ${workoutDay.dayLabel}${workoutDay.durationMinutes ? ` | ${workoutDay.durationMinutes} min` : ''}`,
       rawInput: workoutDay.exercises.map((exercise) => exercise.name).join(', '),
     });
-  }
-
-  private resolveCompletedAt(completedDate?: string) {
-    if (completedDate) {
-      return new Date(`${completedDate}T12:00:00.000Z`);
-    }
-
-    return new Date();
   }
 
   private serializePlan(plan: WorkoutPlanDocument) {

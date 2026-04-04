@@ -3,9 +3,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 import { resolveGoalCalorieTarget } from 'src/common/utils/calorie-target';
+import { resolvePlanDayByDate, resolveTargetDate, getWeekdayLabel } from 'src/common/utils/plan-schedule';
 import { User, UserDocument } from 'src/modules/auth/schemas/user.schema';
-import { DietPlan, DietPlanDocument, DietPlanStatus } from 'src/modules/diet/schemas/diet-plan.schema';
-import { WorkoutPlan, WorkoutPlanDocument } from 'src/modules/workouts/schemas/workout-plan.schema';
+import {
+  DietDay,
+  DietPlan,
+  DietPlanDocument,
+  DietPlanStatus,
+  MealEntry,
+} from 'src/modules/diet/schemas/diet-plan.schema';
+import { WorkoutDay, WorkoutPlan, WorkoutPlanDocument } from 'src/modules/workouts/schemas/workout-plan.schema';
 
 import { CreateCalorieLogDto } from './dto/create-calorie-log.dto';
 import { UpdateCalorieLogDto } from './dto/update-calorie-log.dto';
@@ -265,12 +272,10 @@ export class CalorieLogsService {
       this.workoutPlanModel.findOne({ userId: objectId, status: 'active' }).lean(),
     ]);
 
-    const targetDate = date ? new Date(`${date}T12:00:00.000Z`) : new Date();
-    const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(
-      targetDate,
-    );
-    const matchedDietDay = activeDietPlan?.days?.find((day) => day.dayLabel === dayLabel);
-    const matchedWorkoutDay = activeWorkoutPlan?.days?.find((day) => day.dayLabel === dayLabel);
+    const targetDate = resolveTargetDate(date);
+    const dayLabel = getWeekdayLabel(targetDate);
+    const matchedDietDay = this.resolvePlanDayByDate<DietDay>(activeDietPlan, targetDate);
+    const matchedWorkoutDay = this.resolvePlanDayByDate<WorkoutDay>(activeWorkoutPlan, targetDate);
 
     const dietTarget =
       matchedDietDay?.targetCalories ??
@@ -447,15 +452,14 @@ export class CalorieLogsService {
       return;
     }
 
-    const targetDate = new Date(`${loggedDate}T12:00:00.000Z`);
-    const dayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(targetDate);
-    const matchedDietDay = activeDietPlan.days.find((day) => day.dayLabel === dayLabel);
+    const targetDate = resolveTargetDate(loggedDate);
+    const matchedDietDay = this.resolvePlanDayByDate<DietDay>(activeDietPlan, targetDate);
 
     if (!matchedDietDay) {
       return;
     }
 
-    const matchedMeal = matchedDietDay.meals.find((meal) => meal.type === mealType);
+    const matchedMeal = matchedDietDay.meals.find((meal: MealEntry) => meal.type === mealType);
     if (!matchedMeal) {
       return;
     }
@@ -487,6 +491,13 @@ export class CalorieLogsService {
     }
 
     return new Date().toISOString().slice(0, 7);
+  }
+
+  private resolvePlanDayByDate<TDay extends { dayNumber: number; dayLabel: string }>(
+    plan: { startDate?: Date | string | null; days?: TDay[] | null } | null | undefined,
+    targetDate: Date,
+  ): TDay | null {
+    return resolvePlanDayByDate(plan, targetDate);
   }
 
   private serializeDocument(log: CalorieLogDocument) {
